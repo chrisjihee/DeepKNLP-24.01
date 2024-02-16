@@ -30,5 +30,5 @@ git lfs uninstall
 
 # pretrained LM (for internal user)
 rm -rf pretrained*
-ln -s ../pretrained-com .  # git clone guest@129.254.164.137:git/pretrained-com
+ln -s ../pretrained-com pretrained  # git clone guest@129.254.164.137:git/pretrained-com pretrained
 ln -s ../pretrained-pro .
