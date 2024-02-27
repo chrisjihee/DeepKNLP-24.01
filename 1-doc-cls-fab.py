@@ -235,17 +235,17 @@ def train(
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
         model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
-        seq_len: int = typer.Option(default=16),
+        seq_len: int = typer.Option(default=64),
         # hardware
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
-        device: List[int] = typer.Option(default=[0, 1, 2, 3, 4, 5, 6, 7]),
-        batch_size: int = typer.Option(default=128),
+        device: List[int] = typer.Option(default=[0, 1]),
+        batch_size: int = typer.Option(default=64),
         # learning
-        training_printing: float = typer.Option(default=0.1),
+        training_printing: float = typer.Option(default=0.0333),
         checking_printing: float = typer.Option(default=0.34),
-        checking_epochs: float = typer.Option(default=0.2),
+        checking_epochs: float = typer.Option(default=0.1),
         training_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
         checking_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
         testing_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
