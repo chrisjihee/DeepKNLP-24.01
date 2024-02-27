@@ -31,7 +31,7 @@ def train(
         debugging: bool = typer.Option(default=False),
         verbose: int = typer.Option(default=2),
         # data
-        data_name: str = typer.Option(default="nsmc-mini"),
+        data_name: str = typer.Option(default="nsmc"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -48,7 +48,7 @@ def train(
         batch_size: int = typer.Option(default=64),
         # learning
         validate_fmt: str = typer.Option(default="loss={val_loss:06.4f}, acc={val_acc:06.4f}"),
-        validate_on: float = typer.Option(default=0.1),
+        validate_int: float = typer.Option(default=0.1),
         num_save: int = typer.Option(default=3),
         save_by: str = typer.Option(default="max val_acc"),
         epochs: int = typer.Option(default=1),
@@ -75,12 +75,12 @@ def train(
         strategy=strategy,
         device=device,
         batch_size=batch_size,
-        validate_fmt=validate_fmt,
-        validate_on=validate_on,
+        checking_format=validate_fmt,
+        checking_epochs=validate_int,
         num_save=num_save,
         save_by=save_by,
-        epochs=epochs,
-        lr=lr,
+        num_epochs=epochs,
+        rate=lr,
     )
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", rt=1, rb=1, mb=1, rc='=',
                   verbose=verbose > 0, args=args if debugging or verbose > 1 else None):
