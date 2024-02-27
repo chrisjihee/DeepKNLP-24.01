@@ -200,7 +200,7 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc-mini"),
+        data_name: str = typer.Option(default="nsmc"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
