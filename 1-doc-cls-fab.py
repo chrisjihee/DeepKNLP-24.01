@@ -240,7 +240,7 @@ def train(
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
-        device: List[int] = typer.Option(default=[0, 1]),
+        device: List[int] = typer.Option(default=[0]),
         batch_size: int = typer.Option(default=64),
         # learning
         training_printing: float = typer.Option(default=0.0333),
@@ -251,7 +251,7 @@ def train(
         testing_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
         num_save: int = typer.Option(default=3),
         save_by: str = typer.Option(default="max val_acc"),
-        num_epochs: int = typer.Option(default=2),
+        num_epochs: int = typer.Option(default=3),
         lr: float = typer.Option(default=5e-5),
 ):
     torch.set_float32_matmul_precision('high')
