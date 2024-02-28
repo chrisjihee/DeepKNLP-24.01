@@ -327,7 +327,8 @@ def train(
     args.prog.local_rank = fabric.local_rank
     args.prog.global_rank = fabric.global_rank
 
-    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=', verbose=fabric.local_rank == 0):
+    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}",
+                  args=args, verbose=fabric.local_rank == 0, rt=1, rb=1, rc='='):
         model = TextClsModel(args=args)
         optimizer = model.configure_optimizers()
         model, optimizer = fabric.setup(model, optimizer)
