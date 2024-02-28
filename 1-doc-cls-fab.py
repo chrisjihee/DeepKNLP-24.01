@@ -119,9 +119,10 @@ def train_loop(
         fabric: Fabric,
         model: TextClsModel,
         optimizer: OptimizerLRScheduler,
+        num_epochs: int,
         dataloader: DataLoader,
         val_dataloader: DataLoader,
-        num_epochs: int,
+        test_dataloader: DataLoader | None = None,
 ):
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     model.args.prog.global_step = 0
@@ -130,9 +131,8 @@ def train_loop(
     check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
     print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
     for epoch in range(num_epochs):
-        progress = mute_tqdm_cls(bar_size=30, desc_size=8)(dataloader, desc="training", total=num_batch, unit=f"x{dataloader.batch_size}b")
-        progress.update()
-        for i, batch in enumerate(progress, start=1):
+        progress = mute_tqdm_cls(bar_size=30, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="training")
+        for i, batch in enumerate(dataloader, start=1):
             model.train()
             model.args.prog.global_step += 1
             model.args.prog.global_epoch = model.args.prog.global_step / num_batch
@@ -147,13 +147,15 @@ def train_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.backward(outputs["loss"])
             optimizer.step()
+            progress.update()
             if i % print_interval < 1:
                 fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
                 val_loop(fabric, model, val_dataloader)
-                fabric_barrier(fabric, "[after-check]")
         fabric_barrier(fabric, "[after-epoch]", c='=')
+    if test_dataloader:
+        test_loop(fabric, model, test_dataloader)
 
 
 @torch.no_grad()
@@ -168,17 +170,15 @@ def val_loop(
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
-    progress = mute_tqdm_cls(bar_size=20, desc_size=8)(dataloader, desc="checking", total=num_batch, unit=f"x{dataloader.batch_size}b")
-    progress.update()
-    for i, batch in enumerate(progress, start=1):
+    progress = mute_tqdm_cls(bar_size=20, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="checking")
+    for i, batch in enumerate(dataloader, start=1):
         model.eval()
         outputs = model.validation_step(batch, i)
         preds.extend(outputs["preds"])
         labels.extend(outputs["labels"])
         losses.append(outputs["loss"])
-        if i % print_interval < 1:
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
-        if i >= len(progress):
+        progress.update()
+        if i >= num_batch:
             metrics = {
                 "step": model.args.prog.global_step,
                 "epoch": round(model.args.prog.global_epoch, 4),
@@ -188,6 +188,9 @@ def val_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
                          f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
+        elif i % print_interval < 1:
+            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
+    fabric_barrier(fabric, "[after-check]")
 
 
 @torch.no_grad()
@@ -202,17 +205,15 @@ def test_loop(
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
-    progress = mute_tqdm_cls(bar_size=20, desc_size=8)(dataloader, desc="testing", total=num_batch, unit=f"x{dataloader.batch_size}b")
-    progress.update()
-    for i, batch in enumerate(progress, start=1):
+    progress = mute_tqdm_cls(bar_size=20, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="testing")
+    for i, batch in enumerate(dataloader, start=1):
         model.eval()
         outputs = model.test_step(batch, i)
         preds.extend(outputs["preds"])
         labels.extend(outputs["labels"])
         losses.append(outputs["loss"])
-        if i % print_interval < 1:
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
-        if i >= len(progress):
+        progress.update()
+        if i >= num_batch:
             metrics = {
                 "step": model.args.prog.global_step,
                 "epoch": round(model.args.prog.global_epoch, 4),
@@ -222,6 +223,9 @@ def test_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
                          f" | {model.args.learning.tag_format_on_evaluate.format(**metrics)}")
+        elif i % print_interval < 1:
+            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
+    fabric_barrier(fabric, "[after-test]")
 
 
 @main.command()
@@ -256,9 +260,9 @@ def train(
         print_rate_on_training: float = typer.Option(default=0.05),
         print_rate_on_validate: float = typer.Option(default=0.5),
         print_rate_on_evaluate: float = typer.Option(default=0.5),
-        print_step_on_training: int = typer.Option(default=-1),
-        print_step_on_validate: int = typer.Option(default=-1),
-        print_step_on_evaluate: int = typer.Option(default=-1),
+        print_step_on_training: int = typer.Option(default=1),
+        print_step_on_validate: int = typer.Option(default=1),
+        print_step_on_evaluate: int = typer.Option(default=1),
         tag_format_on_training: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
         tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
         tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
@@ -336,11 +340,12 @@ def train(
     val_dataloader = fabric.setup_dataloaders(val_dataloader)
     fabric_barrier(fabric, "[after-val_dataloader]", c='=')
 
-    train_loop(fabric, model, optimizer, train_dataloader, val_dataloader, num_epochs=args.learning.num_epochs)
+    train_loop(fabric, model, optimizer,
+               num_epochs=args.learning.num_epochs,
+               dataloader=train_dataloader,
+               val_dataloader=val_dataloader,
+               test_dataloader=val_dataloader)
     fabric_barrier(fabric, "[after-train]", c='=')
-
-    test_loop(fabric, model, val_dataloader)
-    fabric_barrier(fabric, "[after-test]", c='=')
 
 
 if __name__ == "__main__":
