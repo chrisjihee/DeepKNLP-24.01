@@ -256,7 +256,7 @@ def train(
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
         num_epochs: int = typer.Option(default=3),
-        check_rate_on_training: float = typer.Option(default=0.1),
+        check_rate_on_training: float = typer.Option(default=1 / 10),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
         print_rate_on_evaluate: float = typer.Option(default=1 / 3),
