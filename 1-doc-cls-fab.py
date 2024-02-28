@@ -236,7 +236,7 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc-mini"),
+        data_name: str = typer.Option(default="nsmc"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -255,14 +255,14 @@ def train(
         learning_rate: float = typer.Option(default=5e-5),
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=1),
+        num_epochs: int = typer.Option(default=3),
         check_rate_on_training: float = typer.Option(default=0.1),
-        print_rate_on_training: float = typer.Option(default=0.05),
-        print_rate_on_validate: float = typer.Option(default=0.5),
-        print_rate_on_evaluate: float = typer.Option(default=0.5),
-        print_step_on_training: int = typer.Option(default=1),
-        print_step_on_validate: int = typer.Option(default=1),
-        print_step_on_evaluate: int = typer.Option(default=1),
+        print_rate_on_training: float = typer.Option(default=0.0334),
+        print_rate_on_validate: float = typer.Option(default=0.334),
+        print_rate_on_evaluate: float = typer.Option(default=0.334),
+        print_step_on_training: int = typer.Option(default=-1),
+        print_step_on_validate: int = typer.Option(default=-1),
+        print_step_on_evaluate: int = typer.Option(default=-1),
         tag_format_on_training: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
         tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
         tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
@@ -345,7 +345,7 @@ def train(
                dataloader=train_dataloader,
                val_dataloader=val_dataloader,
                test_dataloader=val_dataloader)
-    fabric_barrier(fabric, "[after-train]", c='=')
+    fabric_barrier(fabric, "[after-train_loop]", c='=')
 
 
 if __name__ == "__main__":
