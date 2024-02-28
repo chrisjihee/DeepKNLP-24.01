@@ -15,7 +15,7 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import nlpbook
-from chrisbase.data import AppTyper
+from chrisbase.data import AppTyper, JobTimer
 from chrisbase.io import hr
 from chrisbase.time import now
 from chrisbase.util import mute_tqdm_cls
@@ -236,7 +236,7 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc"),
+        data_name: str = typer.Option(default="nsmc-mini"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -249,13 +249,13 @@ def train(
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
-        device: List[int] = typer.Option(default=[0]),
+        device: List[int] = typer.Option(default=[0, 1]),
         batch_size: int = typer.Option(default=64),
         # learning
         learning_rate: float = typer.Option(default=5e-5),
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=3),
+        num_epochs: int = typer.Option(default=1),
         check_rate_on_training: float = typer.Option(default=0.1),
         print_rate_on_training: float = typer.Option(default=0.0334),
         print_rate_on_validate: float = typer.Option(default=0.334),
@@ -327,25 +327,26 @@ def train(
     args.prog.local_rank = fabric.local_rank
     args.prog.global_rank = fabric.global_rank
 
-    model = TextClsModel(args=args)
-    optimizer = model.configure_optimizers()
-    model, optimizer = fabric.setup(model, optimizer)
-    fabric_barrier(fabric, "[after-model]", c='=')
+    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=', verbose=fabric.local_rank == 0):
+        model = TextClsModel(args=args)
+        optimizer = model.configure_optimizers()
+        model, optimizer = fabric.setup(model, optimizer)
+        fabric_barrier(fabric, "[after-model]", c='=')
 
-    train_dataloader = model.train_dataloader()
-    train_dataloader = fabric.setup_dataloaders(train_dataloader)
-    fabric_barrier(fabric, "[after-train_dataloader]", c='=')
+        train_dataloader = model.train_dataloader()
+        train_dataloader = fabric.setup_dataloaders(train_dataloader)
+        fabric_barrier(fabric, "[after-train_dataloader]", c='=')
 
-    val_dataloader = model.val_dataloader()
-    val_dataloader = fabric.setup_dataloaders(val_dataloader)
-    fabric_barrier(fabric, "[after-val_dataloader]", c='=')
+        val_dataloader = model.val_dataloader()
+        val_dataloader = fabric.setup_dataloaders(val_dataloader)
+        fabric_barrier(fabric, "[after-val_dataloader]", c='=')
 
-    train_loop(fabric, model, optimizer,
-               num_epochs=args.learning.num_epochs,
-               dataloader=train_dataloader,
-               val_dataloader=val_dataloader,
-               test_dataloader=val_dataloader)
-    fabric_barrier(fabric, "[after-train_loop]", c='=')
+        train_loop(fabric, model, optimizer,
+                   num_epochs=args.learning.num_epochs,
+                   dataloader=train_dataloader,
+                   val_dataloader=val_dataloader,
+                   test_dataloader=val_dataloader)
+        fabric_barrier(fabric, "[after-train_loop]", c='=')
 
 
 if __name__ == "__main__":
