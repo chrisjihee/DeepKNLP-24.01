@@ -295,7 +295,7 @@ def train(
     fabric = Fabric(
         loggers=[
             CSVLogger(root_dir=".", version=now('%m%d.%H%M%S'), flush_logs_every_n_steps=1),
-            TensorBoardLogger(root_dir=".", version=now('%m%d.%H%M%S')),  # tensorboard --logdir lightning_logs
+            TensorBoardLogger(root_dir=".", version=now('%m%d.%H%M%S')),  # tensorboard --logdir lightning_logs --bind_all
         ],
         devices=args.hardware.devices,
         strategy=args.hardware.strategy,
