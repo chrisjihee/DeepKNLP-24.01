@@ -236,7 +236,7 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc-mini"),
+        data_name: str = typer.Option(default="nsmc"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -255,7 +255,7 @@ def train(
         learning_rate: float = typer.Option(default=5e-5),
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=1),
+        num_epochs: int = typer.Option(default=3),
         check_rate_on_training: float = typer.Option(default=0.1),
         print_rate_on_training: float = typer.Option(default=0.0333),
         print_rate_on_validate: float = typer.Option(default=0.334),
