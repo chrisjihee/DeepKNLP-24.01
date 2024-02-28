@@ -75,12 +75,12 @@ def train(
         strategy=strategy,
         device=device,
         batch_size=batch_size,
-        checking_format=validate_fmt,
-        checking_epochs=validate_int,
-        num_save=num_save,
-        save_by=save_by,
+        tag_format_on_validate=validate_fmt,
+        check_rate_on_training=validate_int,
+        num_saving=num_save,
+        saving_policy=save_by,
         num_epochs=epochs,
-        rate=lr,
+        learning_rate=lr,
     )
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", rt=1, rb=1, mb=1, rc='=',
                   verbose=verbose > 0, args=args if debugging or verbose > 1 else None):
@@ -89,7 +89,7 @@ def train(
         tokenizer = AutoTokenizer.from_pretrained(args.model.pretrained, use_fast=True)
         logger.info(hr('-'))
 
-        train_dataset = ClassificationDataset("train", corpus=corpus, tokenizer=tokenizer)
+        train_dataset = ClassificationDataset("train", data=corpus, tokenizer=tokenizer)
         train_dataloader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset, replacement=False),
                                       num_workers=args.hardware.cpu_workers,
                                       batch_size=args.hardware.batch_size,
@@ -99,7 +99,7 @@ def train(
         logger.info(f"Created train_dataloader providing {len(train_dataloader)} batches")
         logger.info(hr('-'))
 
-        valid_dataset = ClassificationDataset("valid", corpus=corpus, tokenizer=tokenizer)
+        valid_dataset = ClassificationDataset("valid", data=corpus, tokenizer=tokenizer)
         valid_dataloader = DataLoader(valid_dataset, sampler=SequentialSampler(valid_dataset),
                                       num_workers=args.hardware.cpu_workers,
                                       batch_size=args.hardware.batch_size,

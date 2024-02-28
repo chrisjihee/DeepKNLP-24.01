@@ -33,24 +33,29 @@ def fabric_barrier(fabric: Fabric, title: str, c='-'):
     fabric.print(hr(c=c, title=title))
 
 
-class TCModel(LightningModule):
-    def __init__(self,
-                 args: TrainerArguments | TesterArguments,
-                 model: PreTrainedModel,
-                 corpus: NsmcCorpus,
-                 ):
+class TextClsModel(LightningModule):
+    def __init__(self, args: TrainerArguments | TesterArguments):
         super().__init__()
         self.args: TesterArguments | TrainerArguments = args
-        self.model: PreTrainedModel = model
-        self.corpus: NsmcCorpus = corpus
-        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(args.model.pretrained, use_fast=True)
+        self.data: NsmcCorpus = NsmcCorpus(args)
+        self.model: PreTrainedModel = AutoModelForSequenceClassification.from_pretrained(
+            args.model.pretrained,
+            config=AutoConfig.from_pretrained(
+                args.model.pretrained,
+                num_labels=self.data.num_labels
+            ),
+        )
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
+            args.model.pretrained,
+            use_fast=True,
+        )
 
     def configure_optimizers(self):
-        return AdamW(self.model.parameters(), lr=self.args.learning.rate)
+        return AdamW(self.model.parameters(), lr=self.args.learning.learning_rate)
 
     def train_dataloader(self):
         self.fabric.print = logger.info if self.fabric.local_rank == 0 else logger.debug
-        train_dataset = ClassificationDataset("train", corpus=self.corpus, tokenizer=self.tokenizer)
+        train_dataset = ClassificationDataset("train", data=self.data, tokenizer=self.tokenizer)
         train_dataloader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset, replacement=False),
                                       num_workers=self.args.hardware.cpu_workers,
                                       batch_size=self.args.hardware.batch_size,
@@ -62,7 +67,7 @@ class TCModel(LightningModule):
 
     def val_dataloader(self):
         self.fabric.print = logger.info if self.fabric.local_rank == 0 else logger.debug
-        val_dataset = ClassificationDataset("valid", corpus=self.corpus, tokenizer=self.tokenizer)
+        val_dataset = ClassificationDataset("valid", data=self.data, tokenizer=self.tokenizer)
         val_dataloader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset),
                                     num_workers=self.args.hardware.cpu_workers,
                                     batch_size=self.args.hardware.batch_size,
@@ -74,7 +79,7 @@ class TCModel(LightningModule):
 
     def test_dataloader(self):
         self.fabric.print = logger.info if self.fabric.local_rank == 0 else logger.debug
-        val_dataset = ClassificationDataset("test", corpus=self.corpus, tokenizer=self.tokenizer)
+        val_dataset = ClassificationDataset("test", data=self.data, tokenizer=self.tokenizer)
         val_dataloader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset),
                                     num_workers=self.args.hardware.cpu_workers,
                                     batch_size=self.args.hardware.batch_size,
@@ -112,7 +117,7 @@ class TCModel(LightningModule):
 
 def train_loop(
         fabric: Fabric,
-        model: TCModel,
+        model: TextClsModel,
         optimizer: OptimizerLRScheduler,
         dataloader: DataLoader,
         val_dataloader: DataLoader,
@@ -122,8 +127,8 @@ def train_loop(
     model.args.prog.global_step = 0
     model.args.prog.global_epoch = 0.0
     num_batch = len(dataloader)
-    check_interval = model.args.learning.checking_epochs * num_batch - epsilon
-    print_interval = model.args.learning.training_printing * num_batch - epsilon
+    check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
+    print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
     for epoch in range(num_epochs):
         progress = mute_tqdm_cls(bar_size=30, desc_size=8)(dataloader, desc="training", total=num_batch, unit=f"x{dataloader.batch_size}b")
         progress.update()
@@ -144,7 +149,7 @@ def train_loop(
             optimizer.step()
             if i % print_interval < 1:
                 fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
-                             f" | {model.args.learning.training_format.format(**metrics)}")
+                             f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
                 val_loop(fabric, model, val_dataloader)
                 fabric_barrier(fabric, "[after-check]")
@@ -154,12 +159,12 @@ def train_loop(
 @torch.no_grad()
 def val_loop(
         fabric: Fabric,
-        model: TCModel,
+        model: TextClsModel,
         dataloader: DataLoader,
 ):
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
-    print_interval = model.args.learning.checking_printing * num_batch - epsilon
+    print_interval = model.args.learning.print_rate_on_validate * num_batch - epsilon if model.args.learning.print_step_on_validate < 1 else model.args.learning.print_step_on_validate
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
@@ -182,18 +187,18 @@ def val_loop(
             }
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
-                         f" | {model.args.learning.checking_format.format(**metrics)}")
+                         f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
 
 
 @torch.no_grad()
 def test_loop(
         fabric: Fabric,
-        model: TCModel,
+        model: TextClsModel,
         dataloader: DataLoader,
 ):
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
-    print_interval = model.args.learning.checking_printing * num_batch - epsilon
+    print_interval = model.args.learning.print_rate_on_evaluate * num_batch - epsilon if model.args.learning.print_step_on_evaluate < 1 else model.args.learning.print_step_on_evaluate
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
@@ -216,7 +221,7 @@ def test_loop(
             }
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
-                         f" | {model.args.learning.testing_format.format(**metrics)}")
+                         f" | {model.args.learning.tag_format_on_evaluate.format(**metrics)}")
 
 
 @main.command()
@@ -227,7 +232,7 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc"),
+        data_name: str = typer.Option(default="nsmc-mini"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -243,16 +248,20 @@ def train(
         device: List[int] = typer.Option(default=[0]),
         batch_size: int = typer.Option(default=64),
         # learning
-        training_printing: float = typer.Option(default=0.0333),
-        checking_printing: float = typer.Option(default=0.34),
-        checking_epochs: float = typer.Option(default=0.1),
-        training_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
-        checking_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
-        testing_format: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
-        num_save: int = typer.Option(default=3),
-        save_by: str = typer.Option(default="max val_acc"),
-        num_epochs: int = typer.Option(default=3),
-        lr: float = typer.Option(default=5e-5),
+        learning_rate: float = typer.Option(default=5e-5),
+        saving_policy: str = typer.Option(default="max val_acc"),
+        num_saving: int = typer.Option(default=3),
+        num_epochs: int = typer.Option(default=1),
+        check_rate_on_training: float = typer.Option(default=0.1),
+        print_rate_on_training: float = typer.Option(default=0.05),
+        print_rate_on_validate: float = typer.Option(default=0.5),
+        print_rate_on_evaluate: float = typer.Option(default=0.5),
+        print_step_on_training: int = typer.Option(default=-1),
+        print_step_on_validate: int = typer.Option(default=-1),
+        print_step_on_evaluate: int = typer.Option(default=-1),
+        tag_format_on_training: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
+        tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
+        tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
 ):
     torch.set_float32_matmul_precision('high')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -281,16 +290,20 @@ def train(
         device=device,
         batch_size=batch_size,
         # learning
-        training_printing=training_printing,
-        checking_printing=checking_printing,
-        checking_epochs=checking_epochs,
-        training_format=training_format,
-        checking_format=checking_format,
-        testing_format=testing_format,
+        learning_rate=learning_rate,
+        saving_policy=saving_policy,
+        num_saving=num_saving,
         num_epochs=num_epochs,
-        num_save=num_save,
-        save_by=save_by,
-        rate=lr,
+        check_rate_on_training=check_rate_on_training,
+        print_rate_on_training=print_rate_on_training,
+        print_rate_on_validate=print_rate_on_validate,
+        print_rate_on_evaluate=print_rate_on_evaluate,
+        print_step_on_training=print_step_on_training,
+        print_step_on_validate=print_step_on_validate,
+        print_step_on_evaluate=print_step_on_evaluate,
+        tag_format_on_training=tag_format_on_training,
+        tag_format_on_validate=tag_format_on_validate,
+        tag_format_on_evaluate=tag_format_on_evaluate,
     )
     fabric = Fabric(
         loggers=[
@@ -310,18 +323,7 @@ def train(
     args.prog.local_rank = fabric.local_rank
     args.prog.global_rank = fabric.global_rank
 
-    corpus = NsmcCorpus(args)
-    fabric_barrier(fabric, "[after-corpus]", c='=')
-
-    pretrained_model_config = AutoConfig.from_pretrained(
-        args.model.pretrained,
-        num_labels=corpus.num_labels
-    )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        args.model.pretrained,
-        config=pretrained_model_config,
-    )
-    model = TCModel(args=args, model=model, corpus=corpus)
+    model = TextClsModel(args=args)
     optimizer = model.configure_optimizers()
     model, optimizer = fabric.setup(model, optimizer)
     fabric_barrier(fabric, "[after-model]", c='=')
