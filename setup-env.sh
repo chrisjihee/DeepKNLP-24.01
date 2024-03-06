@@ -1,6 +1,6 @@
 #!/bin/bash
 # DeepKNLP
-mamba create -n DeepKNLP-24.01 python=3.10 -y
+mamba create -n DeepKNLP-24.01 python=3.11 -y
 mamba activate DeepKNLP-24.01
 pip install -r requirements.txt
 pip list
