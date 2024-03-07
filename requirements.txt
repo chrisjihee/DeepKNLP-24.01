@@ -16,3 +16,7 @@ seqeval==1.2.2
 importlib-metadata==7.0.1
 chrisbase==0.4.7
 chrislab==0.6.2
+
+# for KG-S2S
+pygtrie
+sentencepiece
