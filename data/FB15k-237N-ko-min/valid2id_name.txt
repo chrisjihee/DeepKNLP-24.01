@@ -1,0 +1,201 @@
+200
+러레이도 | 러레이도 | /location/hud_county_place/place
+애덤 캐럴라 | 배우 | /people/person/profession
+니콜라이 고골 | 수컷 | /people/person/gender
+라크로스 (위스콘신주) | 라크로스 (위스콘신주) | /location/hud_county_place/place
+러신 (위스콘신주) | 러신 (위스콘신주) | /location/hud_county_place/place
+앨리스 쿠퍼 | 배우 | /people/person/profession
+포스트펑크 | 듀란 듀란 | /music/genre/artists
+포스트펑크 | 프로디지 | /music/genre/artists
+포스트펑크 | 블론디 (밴드) | /music/genre/artists
+포스트펑크 | 수지 앤 더 밴시스 | /music/genre/artists
+포스트펑크 | 댐드 (밴드) | /music/genre/artists
+포스트펑크 | 펑크 록 | /music/genre/parent_genre
+포스트펑크 | 글램 록 | /music/genre/parent_genre
+데카 레코드 | 더 후 | /music/record_label/artist
+데카 레코드 | 빙 크로스비 | /music/record_label/artist
+EMI | 존 로드 | /music/record_label/artist
+EMI | 셰어 (가수) | /music/record_label/artist
+EMI | 클리프 리처드 | /music/record_label/artist
+EMI | 데인저 마우스 (음악가) | /music/record_label/artist
+EMI | 조지 해리슨 | /music/record_label/artist
+EMI | 토킹 헤즈 | /music/record_label/artist
+EMI | 마릴리온 | /music/record_label/artist
+EMI | 이브 (가수) | /music/record_label/artist
+EMI | 제쓰로 툴 | /music/record_label/artist
+팀파니 | 조 월시 | /music/instrument/instrumentalists
+잭 웹 | 텔레비전 프로듀서 | /people/person/profession
+로리 앤더슨 | 각본가 | /people/person/profession
+조 슈스터 | 캐나다 | /people/person/nationality
+마이너리티 리포트 (영화) | 드라마 영화 | /film/film/genre
+사랑의 블랙홀 | 프랑스어 | /film/film/language
+A.I. | 오리건주 | /film/film/featured_film_locations
+키스 (밴드) | 뉴욕 | /music/artist/origin
+론 채니 주니어 | 배우 | /people/person/profession
+퀴즈 쇼 (영화) | 포덤 대학교 | /film/film/featured_film_locations
+일 포스티노 | 스페인어 | /film/film/language
+센스 앤 센서빌리티 | 시드니 폴락 | /film/film/executive_produced_by
+파고 (영화) | 드라마 영화 | /film/film/genre
+제리 맥과이어 | 영어 | /film/film/language
+제리 맥과이어 | 트라이스타 픽처스 | /film/film/production_companies
+샤인 (영화) | 뮤지컬 영화 | /film/film/genre
+샤인 (영화) | 영어 | /film/film/language
+이보다 더 좋을 순 없다 | 일상물 | /film/film/genre
+굿 윌 헌팅 | 보스턴 | /film/film/featured_film_locations
+LA 컨피덴셜 | 범죄물 | /film/film/genre
+엘리자베스 (영화) | 워킹 타이틀 필름스 | /film/film/production_companies
+인사이더 (영화) | 아랍어 | /film/film/language
+고스포드 파크 | 범죄물 | /film/film/genre
+물랑 루즈 (2001년 영화) | 코스튬 드라마 | /film/film/genre
+물랑 루즈 (2001년 영화) | 영어 | /film/film/language
+물랑 루즈 (2001년 영화) | 독일어 | /film/film/language
+외침과 속삭임 | 로맨스 영화 | /film/film/genre
+루시 류 | 미국 | /people/person/nationality
+루시 류 | 영화 프로듀서 | /people/person/profession
+제1대 헤이그 백작 더글러스 헤이그 | 런던 | /people/deceased_person/place_of_death
+월리스 비어리 | 포리스트 론 메모리얼 파크 (글렌데일) | /people/deceased_person/place_of_burial
+월리스 비어리 | 배우 | /people/person/profession
+월리스 비어리 | 각본가 | /people/person/profession
+재키 글리슨 | 희극 배우 | /people/person/profession
+구자라트어 | 캐나다 | /language/human_language/countries_spoken_in
+니노 로타 | 로마 | /people/deceased_person/place_of_death
+하얼빈시 | 중국 표준시 | /location/location/time_zones
+엔젤 (드라마) | 공포 영화 | /tv/tv_program/genre
+인디 록 | 토킹 헤즈 | /music/genre/artists
+인디 록 | 짐 오루크 | /music/genre/artists
+인디 록 | 포스트펑크 | /music/genre/parent_genre
+제5원소 (영화) | 미국 | /film/film/country
+에디 이저드 | 조지 칼린 | /influence/influence_node/influenced_by
+에디 이저드 | 빌리 코널리 | /influence/influence_node/influenced_by
+트렌트 레즈너 | 음악 프로듀서 | /people/person/profession
+케빈 코스트너 | 린우드 (캘리포니아주) | /people/person/place_of_birth
+케빈 코스트너 | 영화 감독 | /people/person/profession
+컨스피러시 (1997년 영화) | 액션 영화 | /film/film/genre
+크리스티나 아길레라 | 미국 | /people/person/nationality
+스티브 앨런 | 배우 | /people/person/profession
+스티브 앨런 | 각본가 | /people/person/profession
+멀리사 조앤 하트 | 저술가 | /people/person/profession
+서브 팝 | 패튼 오즈월트 | /music/record_label/artist
+아돌프 멘주 | 미국 | /people/person/nationality
+아돌프 멘주 | 배우 | /people/person/profession
+성룡 | 일본어 | /people/person/languages
+성룡 | 희극 배우 | /people/person/profession
+프랜쇼 톤 | 배우 | /people/person/profession
+스와스모어 칼리지 | 사립 대학 | /education/educational_institution/school_type
+스타 트렉 5: 최후의 결전 | 모험 영화 | /film/film/genre
+밥 뉴하트 | 잭 베니 | /influence/influence_node/influenced_by
+밥 뉴하트 | 미국 | /people/person/nationality
+암살 | 윌리엄 매킨리 | /people/cause_of_death/people
+레이먼드 매시 | 미국 | /people/person/nationality
+레이먼드 매시 | 캐나다 | /people/person/nationality
+레이먼드 매시 | 성공회 | /people/person/religion
+미셸 르그랑 | 파리 (프랑스) | /people/person/place_of_birth
+미셸 르그랑 | 작곡가 | /people/person/profession
+28일 후 | 미국 | /film/film/country
+28일 후 | 런던 | /film/film/featured_film_locations
+오스트리아-헝가리 | 루마니아어 | /location/country/official_language
+피터 스토메어 | 수컷 | /people/person/gender
+구토 | 수막염 | /medicine/symptom/symptom_of
+구토 | 후천면역결핍증후군 | /medicine/symptom/symptom_of
+노먼 주이슨 | 배우 | /people/person/profession
+라켈 웰치 | 배우 | /people/person/profession
+아서 로렌츠 | 수컷 | /people/person/gender
+아서 로렌츠 | 무신론 | /people/person/religion
+알바니아어 | 몬테네그로 | /language/human_language/countries_spoken_in
+머빈 르로이 | 영화 감독 | /people/person/profession
+조지 스티븐스 | 영화 프로듀서 | /people/person/profession
+조지 스티븐스 | 촬영 감독 | /people/person/profession
+웨어 (언어) | 화양연화 | /media_common/netflix_genre/titles
+웨어 (언어) | 중경삼림 | /media_common/netflix_genre/titles
+템테이션스 | 디트로이트 | /music/artist/origin
+프리텐더스 | 암컷 | /people/person/gender
+사이먼 페그 | 수컷 | /people/person/gender
+사이먼 페그 | 영국 | /people/person/nationality
+스티비 원더 | 피아노 연주자 | /people/person/profession
+스티비 원더 | 키보디스트 | /people/person/profession
+사이키델릭 트랜스 | 애시드 하우스 | /music/genre/parent_genre
+얼터너티브 힙합 | 벡 (음악가) | /music/genre/artists
+얼터너티브 힙합 | 데이먼 알반 | /music/genre/artists
+마빈 게이 | 미국 | /people/person/nationality
+요미우리 자이언츠 | 하양 | /sports/sports_team/colors
+아시아계 미국인 | 마거릿 조 | /people/ethnicity/people
+개러지 록 | 화이트 스트라이프스 | /music/genre/artists
+개러지 록 | 더 블랙 키스 | /music/genre/artists
+닉 파크 | 영국 | /people/person/nationality
+세라 매클라클런 | 암컷 | /people/person/gender
+세라 매클라클런 | 이교 (종교) | /people/person/religion
+캐럴 킹 | 맨해튼 | /people/person/place_of_birth
+리처드 커티스 | 음악 프로듀서 | /people/person/profession
+도나 서머 | 작곡가 | /people/person/profession
+잭슨 브라운 | 음악가 | /people/person/profession
+윌리 넬슨 | 영화 프로듀서 | /people/person/profession
+윌리 넬슨 | 배우 | /people/person/profession
+윌리 넬슨 | 음악 프로듀서 | /people/person/profession
+샌프란시스코 주립 대학교 | 공립 대학 | /education/educational_institution/school_type
+마이클 레드그레이브 | 잉글랜드 | /people/person/nationality
+마이클 레드그레이브 | 작가 | /people/person/profession
+세르지 탄키안 | 수컷 | /people/person/gender
+다니엘 래드클리프 | 잉글랜드 | /people/person/nationality
+다니엘 래드클리프 | 배우 | /people/person/profession
+아슈케나즈 유대인 | 밥 딜런 | /people/ethnicity/people
+아슈케나즈 유대인 | 아이작 아시모프 | /people/ethnicity/people
+아슈케나즈 유대인 | 잭 에프론 | /people/ethnicity/people
+아슈케나즈 유대인 | 래리 데이비드 | /people/ethnicity/people
+데이비드 수셰이 | 배우 | /people/person/profession
+데이비드 수셰이 | 성공회 | /people/person/religion
+앨버트 브룩스 | 성우 | /people/person/profession
+슈리브포트 | 중부 표준시 | /location/location/time_zones
+이스트랜싱 | 동부 표준시 | /location/location/time_zones
+트래버스시티 | 동부 표준시 | /location/location/time_zones
+세인트클라우드 (미네소타주) | 세인트클라우드 (미네소타주) | /location/hud_county_place/place
+영스타운 (오하이오주) | 영스타운 (오하이오주) | /location/hud_county_place/place
+털사 | 털사 | /location/hud_county_place/place
+털사 | 중부 표준시 | /location/location/time_zones
+토리야마 아키라 | 일본의 만화가 | /people/person/profession
+캐서린 지타존스 | 암컷 | /people/person/gender
+애머릴로 | 애머릴로 | /location/hud_county_place/place
+필립 로스 | 니콜라이 고골 | /influence/influence_node/influenced_by
+필립 로스 | 윌리엄 포크너 | /influence/influence_node/influenced_by
+오스틴 파워: 골드멤버 | 희극 | /film/film/genre
+오스틴 파워: 골드멤버 | 독일어 | /film/film/language
+오스틴 파워: 골드멤버 | 데미 무어 | /film/film/produced_by
+오스틴 파워: 제로 | 독일 | /film/film/country
+오스틴 파워: 제로 | 데미 무어 | /film/film/produced_by
+딘 마틴 | 송라이터 | /people/person/profession
+조지 밀러 (영화 감독) | 이스트윅의 마녀들 | /film/director/film
+조지 밀러 (영화 감독) | 각본가 | /people/person/profession
+배즈 루어먼 | 수컷 | /people/person/gender
+배즈 루어먼 | 영화 프로듀서 | /people/person/profession
+배즈 루어먼 | 배우 | /people/person/profession
+배즈 루어먼 | 각본가 | /people/person/profession
+라토야 잭슨 | 배우 | /people/person/profession
+메이 휘트먼 | 배우 | /people/person/profession
+숀 콤스 | 영화 프로듀서 | /people/person/profession
+숀 콤스 | 텔레비전 프로듀서 | /people/person/profession
+숀 콤스 | 로마가톨릭주의 | /people/person/religion
+독일인 | 자코 파스토리우스 | /people/ethnicity/people
+독일인 | 베르톨트 브레히트 | /people/ethnicity/people
+독일인 | 알티 레인지 | /people/ethnicity/people
+독일인 | 세라 페일린 | /people/ethnicity/people
+독일인 | 한나 아렌트 | /people/ethnicity/people
+오르간 | 버킷헤드 | /music/instrument/instrumentalists
+오르간 | 우에마쓰 노부오 | /music/instrument/instrumentalists
+자 자 가보르 | 유대교 | /people/person/religion
+제인 호록스 | 음악가 | /people/person/profession
+존 밀스 | 영국 | /people/person/nationality
+배스 대학교 | 공립 대학 | /education/educational_institution/school_type
+해리 벨라폰테 | 할렘 | /people/person/place_of_birth
+해리 벨라폰테 | 텔레비전 프로듀서 | /people/person/profession
+피트 타운젠드 | 작곡가 | /people/person/profession
+피트 타운젠드 | 각본가 | /people/person/profession
+현대 기독교 음악 | 에이미 그랜트 | /music/genre/artists
+현대 기독교 음악 | 마이클 W. 스미스 | /music/genre/artists
+현대 기독교 음악 | 캐리 언더우드 | /music/genre/artists
+제2형 당뇨병 | 노인 | /medicine/disease/risk_factors
+센트럴 플로리다 대학교 | 센트럴 플로리다 대학교 | /education/educational_institution_campus/educational_institution
+윌 스미스 | 배우 | /people/person/profession
+므스티슬라프 로스트로포비치 | 미국 | /people/person/nationality
+런던 브루넬 대학교 | 공립 대학 | /education/educational_institution/school_type
+세인트찰스군 (미주리주) | 중부 표준시 | /location/location/time_zones
+헤비 메탈 (영화) | SF (장르) | /film/film/genre
+요크 대학교 (잉글랜드) | 그리니치 평균시 | /location/location/time_zones

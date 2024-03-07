@@ -1,0 +1,91 @@
+90
+0	award , award category , category of
+1	award , award category , disciplines or subjects
+2	base , aareas , schema , administrative area , administrative parent
+3	base , aareas , schema , administrative area , capital
+4	base , americancomedy , celebrity impressionist , celebrities impersonated
+5	base , biblioness , bibs location , country
+6	base , biblioness , bibs location , state
+7	base , culturalevent , event , entity involved
+8	base , eating , practicer of diet , diet
+9	base , locations , continents , countries within
+10	broadcast , content , artist
+11	business , business operation , industry
+12	dataworld , gardening hint , split to
+13	education , educational institution , campuses
+14	education , educational institution , colors
+15	education , educational institution , school type
+16	education , educational institution campus , educational institution
+17	film , director , film
+18	film , film , cinematography
+19	film , film , costume design by
+20	film , film , country
+21	film , film , edited by
+22	film , film , executive produced by
+23	film , film , featured film locations
+24	film , film , film art direction by
+25	film , film , film festivals
+26	film , film , film format
+27	film , film , film production design by
+28	film , film , genre
+29	film , film , language
+30	film , film , music
+31	film , film , prequel
+32	film , film , produced by
+33	film , film , production companies
+34	film , film , story by
+35	film , film , written by
+36	film , film subject , films
+37	influence , influence node , influenced by
+38	language , human language , countries spoken in
+39	location , administrative division , country
+40	location , administrative division , first level division of
+41	location , country , capital
+42	location , country , form of government
+43	location , country , official language
+44	location , country , second level divisions
+45	location , hud county place , county
+46	location , hud county place , place
+47	location , location , contains
+48	location , location , partially contains
+49	location , location , time zones
+50	location , us county , county seat
+51	media common , netflix genre , titles
+52	medicine , disease , notable people with this condition
+53	medicine , disease , risk factors
+54	medicine , symptom , symptom of
+55	music , artist , origin
+56	music , genre , artists
+57	music , genre , parent genre
+58	music , instrument , family
+59	music , instrument , instrumentalists
+60	music , record label , artist
+61	olympics , olympic games , participating countries
+62	olympics , olympic games , sports
+63	organization , organization , place founded
+64	organization , organization founder , organizations founded
+65	people , cause of death , people
+66	people , deceased person , place of burial
+67	people , deceased person , place of death
+68	people , ethnicity , geographic distribution
+69	people , ethnicity , languages spoken
+70	people , ethnicity , people
+71	people , person , gender
+72	people , person , languages
+73	people , person , nationality
+74	people , person , place of birth
+75	people , person , profession
+76	people , person , religion
+77	people , profession , specialization of
+78	sports , sports team , colors
+79	sports , sports team , sport
+80	sports , sports team location , teams
+81	time , event , instance of recurring event
+82	time , event , locations
+83	tv , tv program , country of origin
+84	tv , tv program , genre
+85	tv , tv program , languages
+86	tv , tv program , program creator
+87	user , alexander , philosophy , philosopher , interests
+88	user , jg , default domain , olympic games , sports
+89	user , ktrueman , default domain , international organization , member states

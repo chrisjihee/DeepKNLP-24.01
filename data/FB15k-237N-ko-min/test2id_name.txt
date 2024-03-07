@@ -1,0 +1,101 @@
+100
+마셜 (텍사스주) | 중부 표준시 | /location/location/time_zones
+러벅 (텍사스주) | 중부 표준시 | /location/location/time_zones
+웨이코 | 웨이코 | /location/hud_county_place/place
+샌앤젤로 | 중부 표준시 | /location/location/time_zones
+위치토폴스 | 중부 표준시 | /location/location/time_zones
+해컨색 (뉴저지주) | 해컨색 (뉴저지주) | /location/hud_county_place/place
+터코마 | 태평양 표준시 | /location/location/time_zones
+리처드 해리스 | 아일랜드 | /people/person/nationality
+리처드 해리스 | 저술가 | /people/person/profession
+파커즈버그 | 동부 표준시 | /location/location/time_zones
+포스트펑크 | 심플 마인즈 | /music/genre/artists
+포스트펑크 | 루페 피아스코 | /music/genre/artists
+포스트펑크 | 플레이밍 립스 | /music/genre/artists
+데카 레코드 | 제이미 컬럼 | /music/record_label/artist
+데카 레코드 | 에릭 버든 | /music/record_label/artist
+데카 레코드 | 제시 노먼 | /music/record_label/artist
+데카 레코드 | 냇 킹 콜 | /music/record_label/artist
+데카 레코드 | 카멜 (밴드) | /music/record_label/artist
+EMI | 씬 리지 | /music/record_label/artist
+EMI | 마스터 P | /music/record_label/artist
+EMI | 팻 베네타 | /music/record_label/artist
+EMI | 존 레논 | /music/record_label/artist
+EMI | B.B. 킹 | /music/record_label/artist
+EMI | 빌리 아이돌 | /music/record_label/artist
+EMI | 홀리스 (밴드) | /music/record_label/artist
+EMI | 레드 핫 칠리 페퍼스 | /music/record_label/artist
+EMI | 장미셸 자르 | /music/record_label/artist
+EMI | 딥 퍼플 | /music/record_label/artist
+잭 웹 | 미국 | /people/person/nationality
+조 슈스터 | 로스앤젤레스 | /people/deceased_person/place_of_death
+피트 시거 | 미국 | /people/person/nationality
+마이너리티 리포트 (영화) | 워싱턴 D.C. | /film/film/featured_film_locations
+마이너리티 리포트 (영화) | 범죄물 | /film/film/genre
+사랑의 블랙홀 | 드라마 영화 | /film/film/genre
+A.I. | 미국 | /film/film/country
+A.I. | SF (장르) | /film/film/genre
+퀴즈 쇼 (영화) | 역사물 | /film/film/genre
+아폴로 13 | 이매진 엔터테인먼트 | /film/film/production_companies
+센스 앤 센서빌리티 | 제인 오스틴 | /film/film/story_by
+파고 (영화) | 블랙 코미디 | /film/film/genre
+제리 맥과이어 | 희극 | /film/film/genre
+샤인 (영화) | 로맨스 영화 | /film/film/genre
+이보다 더 좋을 순 없다 | 드라마 영화 | /film/film/genre
+이보다 더 좋을 순 없다 | LGBT | /film/film/genre
+굿 윌 헌팅 | 영어 | /film/film/language
+인생은 아름다워 (1997년 영화) | 전쟁 영화 | /film/film/genre
+인생은 아름다워 (1997년 영화) | 우디 앨런 | /film/film/produced_by
+고스포드 파크 | 이탈리아 | /film/film/country
+고스포드 파크 | 영국 | /film/film/country
+고스포드 파크 | 영어 | /film/film/language
+루시 류 | 음악가 | /people/person/profession
+엔젤 (드라마) | 초자연적 현상 | /tv/tv_program/genre
+엔젤 (드라마) | 영어 | /tv/tv_program/languages
+미세스 브라운 | 독립 영화 | /film/film/genre
+인디 록 | 벡 (음악가) | /music/genre/artists
+인디 록 | 화이트 스트라이프스 | /music/genre/artists
+인디 록 | 더 마스 볼타 | /music/genre/artists
+인디 록 | 킹스 오브 리언 | /music/genre/artists
+인디 록 | 조니 용 보시 | /music/genre/artists
+인디 록 | 위저 | /music/genre/artists
+제5원소 (영화) | 모험 영화 | /film/film/genre
+제5원소 (영화) | 영어 | /film/film/language
+에디 이저드 | 영국 | /people/person/nationality
+인스트루멘탈 록 | 존 폴 존스 (음악가) | /music/genre/artists
+블라디미르 호로비츠 | 미국 | /people/person/nationality
+케빈 코스트너 | 미국 | /people/person/nationality
+크리스티나 아길레라 | 싱어송라이터 | /people/person/profession
+스티브 앨런 | 영화 프로듀서 | /people/person/profession
+스티브 앨런 | 로마가톨릭주의 | /people/person/religion
+멀리사 조앤 하트 | 로마가톨릭주의 | /people/person/religion
+서브 팝 | 브렛 매켄지 | /music/record_label/artist
+서브 팝 | 저메인 클레먼트 | /music/record_label/artist
+서브 팝 | 벤 기버드 | /music/record_label/artist
+재키 쿠퍼 | 샌타모니카 | /people/deceased_person/place_of_death
+재키 쿠퍼 | 병사 (군사) | /people/person/profession
+대실 해밋 | 미국 | /people/person/nationality
+성룡 | 스페인어 | /people/person/languages
+성룡 | 각본가 | /people/person/profession
+성룡 | 불교 | /people/person/religion
+윌리엄 파월 | 팜스프링스 | /people/deceased_person/place_of_death
+스와스모어 칼리지 | 스와스모어 칼리지 | /education/educational_institution/campuses
+스와스모어 칼리지 | 스와스모어 칼리지 | /education/educational_institution_campus/educational_institution
+이자벨 위페르 | 암컷 | /people/person/gender
+이자벨 위페르 | 배우 | /people/person/profession
+마를레네 디트리히 | 배우 | /people/person/profession
+밥 뉴하트 | 음악가 | /people/person/profession
+멕시코 국립 자치 대학교 | 금색 | /education/educational_institution/colors
+암살 | 바스터즈: 거친 녀석들 | /film/film_subject/films
+암살 | 피에르 파올로 파솔리니 | /people/cause_of_death/people
+암살 | 베니토 무솔리니 | /people/cause_of_death/people
+월터 피전 | 캐나다 | /people/person/nationality
+미셸 르그랑 | 지휘 | /people/person/profession
+오스트리아-헝가리 | 빈 | /location/country/capital
+오스트리아-헝가리 | 체코어 | /location/country/official_language
+오스트리아-헝가리 | 이탈리아어 | /location/country/official_language
+오스트리아-헝가리 | 크로아티아어 | /location/country/official_language
+오스트리아-헝가리 | 프라하 | /location/location/contains
+구토 | 이질 | /medicine/symptom/symptom_of
+구토 | 황달 | /medicine/symptom/symptom_of
+낸시 펠로시 | 정치인 | /people/person/profession

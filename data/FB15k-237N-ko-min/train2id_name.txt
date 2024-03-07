@@ -1,0 +1,401 @@
+400
+덴턴 (텍사스주) | 덴턴군 | /location/hud_county_place/county
+덴턴 (텍사스주) | 덴턴 (텍사스주) | /location/hud_county_place/place
+덴턴 (텍사스주) | 노스 텍사스 대학교 | /location/location/contains
+덴턴 (텍사스주) | 중부 표준시 | /location/location/time_zones
+엘패소 | 엘패소 | /location/hud_county_place/place
+엘패소 | 산악 표준시 | /location/location/time_zones
+마셜 (텍사스주) | 마셜 (텍사스주) | /location/hud_county_place/place
+보몬트 (텍사스주) | 보몬트 (텍사스주) | /location/hud_county_place/place
+보몬트 (텍사스주) | 중부 표준시 | /location/location/time_zones
+러벅 (텍사스주) | 미국 | /base/biblioness/bibs_location/country
+러벅 (텍사스주) | 텍사스주 | /base/biblioness/bibs_location/state
+러벅 (텍사스주) | 러벅 (텍사스주) | /location/hud_county_place/place
+러벅 (텍사스주) | 텍사스 공과대학교 | /location/location/contains
+웨이코 | 베일러 대학교 | /location/location/contains
+웨이코 | 중부 표준시 | /location/location/time_zones
+타일러 (텍사스주) | 타일러 (텍사스주) | /location/hud_county_place/place
+타일러 (텍사스주) | 중부 표준시 | /location/location/time_zones
+샌앤젤로 | 샌앤젤로 | /location/hud_county_place/place
+위치토폴스 | 위치토폴스 | /location/hud_county_place/place
+해컨색 (뉴저지주) | 버건군 | /location/hud_county_place/county
+해컨색 (뉴저지주) | 동부 표준시 | /location/location/time_zones
+로건 (유타주) | 미국 | /base/biblioness/bibs_location/country
+로건 (유타주) | 캐시군 | /location/hud_county_place/county
+로건 (유타주) | 로건 (유타주) | /location/hud_county_place/place
+로건 (유타주) | 유타 주립 대학교 | /location/location/contains
+로건 (유타주) | 산악 표준시 | /location/location/time_zones
+오그던 (유타주) | 웨버군 (유타주) | /location/hud_county_place/county
+오그던 (유타주) | 오그던 (유타주) | /location/hud_county_place/place
+오그던 (유타주) | 산악 표준시 | /location/location/time_zones
+에이미 그랜트 | 암컷 | /people/person/gender
+에이미 그랜트 | 미국 | /people/person/nationality
+에이미 그랜트 | 오거스타 (조지아주) | /people/person/place_of_birth
+에이미 그랜트 | 싱어송라이터 | /people/person/profession
+에이미 그랜트 | 배우 | /people/person/profession
+에이미 그랜트 | 기타 연주자 | /people/person/profession
+에이미 그랜트 | 예술가 | /people/person/profession
+몬테카를로 | 모나코 | /base/aareas/schema/administrative_area/administrative_parent
+애덤 캐럴라 | 조지 칼린 | /influence/influence_node/influenced_by
+애덤 캐럴라 | 수컷 | /people/person/gender
+애덤 캐럴라 | 미국 | /people/person/nationality
+애덤 캐럴라 | 희극 배우 | /people/person/profession
+애덤 캐럴라 | 대목장 | /people/person/profession
+애덤 캐럴라 | 텔레비전 프로듀서 | /people/person/profession
+애덤 캐럴라 | 라디오 DJ | /people/person/profession
+애덤 캐럴라 | 각본가 | /people/person/profession
+애덤 캐럴라 | 성우 | /people/person/profession
+애덤 캐럴라 | 무신론 | /people/person/religion
+벨뷰 (워싱턴주) | 킹군 (워싱턴주) | /location/hud_county_place/county
+벨뷰 (워싱턴주) | 벨뷰 (워싱턴주) | /location/hud_county_place/place
+벨뷰 (워싱턴주) | 태평양 표준시 | /location/location/time_zones
+브레머튼 (워싱턴주) | 키챕군 | /location/hud_county_place/county
+브레머튼 (워싱턴주) | 브레머튼 (워싱턴주) | /location/hud_county_place/place
+브레머튼 (워싱턴주) | 태평양 표준시 | /location/location/time_zones
+터코마 | 피어스군 (워싱턴주) | /location/hud_county_place/county
+터코마 | 터코마 | /location/hud_county_place/place
+에버렛 (워싱턴주) | 스노호미시군 | /location/hud_county_place/county
+에버렛 (워싱턴주) | 에버렛 (워싱턴주) | /location/hud_county_place/place
+에버렛 (워싱턴주) | 태평양 표준시 | /location/location/time_zones
+스포캔 | 워싱턴주 | /base/biblioness/bibs_location/state
+스포캔 | 스포캔 | /location/hud_county_place/place
+스포캔 | 곤자가 대학교 | /location/location/contains
+스포캔 | 태평양 표준시 | /location/location/time_zones
+리처드 해리스 | 수컷 | /people/person/gender
+리처드 해리스 | 리머릭 | /people/person/place_of_birth
+리처드 해리스 | 싱어송라이터 | /people/person/profession
+리처드 해리스 | 배우 | /people/person/profession
+리처드 해리스 | 영화 감독 | /people/person/profession
+모건타운 (웨스트버지니아주) | 미국 | /base/biblioness/bibs_location/country
+모건타운 (웨스트버지니아주) | 웨스트버지니아주 | /base/biblioness/bibs_location/state
+모건타운 (웨스트버지니아주) | 모건타운 (웨스트버지니아주) | /location/hud_county_place/place
+모건타운 (웨스트버지니아주) | 웨스트버지니아 대학교 | /location/location/contains
+모건타운 (웨스트버지니아주) | 동부 표준시 | /location/location/time_zones
+파커즈버그 | 파커즈버그 | /location/hud_county_place/place
+니콜라이 고골 | 미겔 데 세르반테스 | /influence/influence_node/influenced_by
+니콜라이 고골 | 알렉산드르 푸시킨 | /influence/influence_node/influenced_by
+니콜라이 고골 | 모스크바 | /people/deceased_person/place_of_death
+니콜라이 고골 | 러시아 | /people/person/nationality
+니콜라이 고골 | 우크라이나 | /people/person/nationality
+니콜라이 고골 | 극작가 | /people/person/profession
+니콜라이 고골 | 저술가 | /people/person/profession
+니콜라이 고골 | 각본가 | /people/person/profession
+라크로스 (위스콘신주) | 중부 표준시 | /location/location/time_zones
+러신 (위스콘신주) | 중부 표준시 | /location/location/time_zones
+릴리 톰린 | 암컷 | /people/person/gender
+릴리 톰린 | 미국 | /people/person/nationality
+릴리 톰린 | 디트로이트 | /people/person/place_of_birth
+릴리 톰린 | 희극 배우 | /people/person/profession
+릴리 톰린 | 영화 프로듀서 | /people/person/profession
+릴리 톰린 | 배우 | /people/person/profession
+릴리 톰린 | 텔레비전 프로듀서 | /people/person/profession
+릴리 톰린 | 저술가 | /people/person/profession
+카주 | 브라이언 존스 | /music/instrument/instrumentalists
+페이스 노 모어 | 샌프란시스코 | /music/artist/origin
+앨리스 쿠퍼 | 수컷 | /people/person/gender
+앨리스 쿠퍼 | 미국 | /people/person/nationality
+앨리스 쿠퍼 | 디트로이트 | /people/person/place_of_birth
+앨리스 쿠퍼 | 싱어송라이터 | /people/person/profession
+앨리스 쿠퍼 | 디스크 자키 | /people/person/profession
+앨리스 쿠퍼 | 기타 연주자 | /people/person/profession
+앨리스 쿠퍼 | 음악가 | /people/person/profession
+시킴주 | 인도 | /base/aareas/schema/administrative_area/administrative_parent
+포스트펑크 | 페이스 노 모어 | /music/genre/artists
+포스트펑크 | 더 컬트 | /music/genre/artists
+포스트펑크 | AFI (밴드) | /music/genre/artists
+포스트펑크 | 더 카스 | /music/genre/artists
+포스트펑크 | INXS | /music/genre/artists
+포스트펑크 | The B-52's | /music/genre/artists
+포스트펑크 | 데비 해리 | /music/genre/artists
+포스트펑크 | 로버트 스미스 (음악가) | /music/genre/artists
+포스트펑크 | 래리 멀런 주니어 | /music/genre/artists
+포스트펑크 | 니코 (가수) | /music/genre/artists
+포스트펑크 | 보노 | /music/genre/artists
+포스트펑크 | 디 에지 | /music/genre/artists
+포스트펑크 | 모리세이 | /music/genre/artists
+포스트펑크 | 애덤 앤트 | /music/genre/artists
+포스트펑크 | 이기 팝 | /music/genre/artists
+포스트펑크 | 닉 케이브 | /music/genre/artists
+포스트펑크 | 빌리 아이돌 | /music/genre/artists
+포스트펑크 | 게리 누만 | /music/genre/artists
+포스트펑크 | 디페쉬 모드 | /music/genre/artists
+포스트펑크 | 디보 | /music/genre/artists
+포스트펑크 | 닉 케이브 앤드 더 배드 시즈 | /music/genre/artists
+포스트펑크 | 엘비스 코스텔로 | /music/genre/artists
+포스트펑크 | 스티븐 윌슨 | /music/genre/artists
+포스트펑크 | 조시 프리스 | /music/genre/artists
+포스트펑크 | 톰 델론지 | /music/genre/artists
+포스트펑크 | 뉴 오더 | /music/genre/artists
+포스트펑크 | 픽시스 | /music/genre/artists
+포스트펑크 | 소닉 유스 | /music/genre/artists
+포스트펑크 | 토킹 헤즈 | /music/genre/artists
+포스트펑크 | 더 폴 (밴드) | /music/genre/artists
+포스트펑크 | U2 | /music/genre/artists
+포스트펑크 | 폴리스 (밴드) | /music/genre/artists
+포스트펑크 | 더 큐어 | /music/genre/artists
+포스트펑크 | 마크 머더즈보 | /music/genre/artists
+포스트펑크 | 데이비드 번 | /music/genre/artists
+포스트펑크 | 스팅 (가수) | /music/genre/artists
+포스트펑크 | 덥 음악 | /music/genre/parent_genre
+포스트펑크 | 크라우트록 | /music/genre/parent_genre
+포스트펑크 | 펑크 | /music/genre/parent_genre
+포스트펑크 | 레게 | /music/genre/parent_genre
+포스트펑크 | 월드 뮤직 | /music/genre/parent_genre
+데카 레코드 | 무디 블루스 | /music/record_label/artist
+데카 레코드 | 피트 타운젠드 | /music/record_label/artist
+데카 레코드 | 키스 리처즈 | /music/record_label/artist
+데카 레코드 | 보이즈 투 멘 | /music/record_label/artist
+데카 레코드 | 씬 리지 | /music/record_label/artist
+데카 레코드 | 메리앤 페이스풀 | /music/record_label/artist
+데카 레코드 | 로레타 린 | /music/record_label/artist
+데카 레코드 | 브라이언 애덤스 | /music/record_label/artist
+데카 레코드 | 애니 레녹스 | /music/record_label/artist
+데카 레코드 | 브라이언 존스 | /music/record_label/artist
+데카 레코드 | 클리프 리처드 | /music/record_label/artist
+데카 레코드 | 모리세이 | /music/record_label/artist
+데카 레코드 | 리키 넬슨 | /music/record_label/artist
+데카 레코드 | 밴 모리슨 | /music/record_label/artist
+데카 레코드 | 미셀 엔디지오첼로 | /music/record_label/artist
+데카 레코드 | 안드레아 보첼리 | /music/record_label/artist
+데카 레코드 | 돌리 파튼 | /music/record_label/artist
+데카 레코드 | 조 코커 | /music/record_label/artist
+데카 레코드 | 리하르트 바그너 | /music/record_label/artist
+데카 레코드 | 롤링 스톤스 | /music/record_label/artist
+데카 레코드 | 톰 존스 (가수) | /music/record_label/artist
+데카 레코드 | 엘라 피츠제럴드 | /music/record_label/artist
+데카 레코드 | 빌리 홀리데이 | /music/record_label/artist
+데카 레코드 | 제네시스 (밴드) | /music/record_label/artist
+데카 레코드 | 캣 스티븐스 | /music/record_label/artist
+데카 레코드 | 보비 대린 | /music/record_label/artist
+데카 레코드 | 런던 | /organization/organization/place_founded
+EMI | 음악 | /business/business_operation/industry
+EMI | 제임스 테일러 | /music/record_label/artist
+EMI | 듀란 듀란 | /music/record_label/artist
+EMI | 캐럴 킹 | /music/record_label/artist
+EMI | AC/DC | /music/record_label/artist
+EMI | 해리 벨라폰테 | /music/record_label/artist
+EMI | 아이언 메이든 | /music/record_label/artist
+EMI | INXS | /music/record_label/artist
+EMI | 로저 워터스 | /music/record_label/artist
+EMI | 블론디 (밴드) | /music/record_label/artist
+EMI | 잭 브루스 | /music/record_label/artist
+EMI | 클라우스 부어만 | /music/record_label/artist
+EMI | 오마리온 | /music/record_label/artist
+EMI | 맨디 무어 | /music/record_label/artist
+EMI | 우타다 히카루 | /music/record_label/artist
+EMI | 닉 메이슨 | /music/record_label/artist
+EMI | 사이먼 코웰 | /music/record_label/artist
+EMI | 하트 (밴드) | /music/record_label/artist
+EMI | 사라 브라이트만 | /music/record_label/artist
+EMI | 앤서니 키디스 | /music/record_label/artist
+EMI | 프레디 머큐리 | /music/record_label/artist
+EMI | 시드 배럿 | /music/record_label/artist
+EMI | 데이비드 길모어 | /music/record_label/artist
+EMI | 슬래시 (음악가) | /music/record_label/artist
+EMI | DMX (래퍼) | /music/record_label/artist
+EMI | 아이스 큐브 | /music/record_label/artist
+EMI | 스눕 독 | /music/record_label/artist
+EMI | 티나 터너 | /music/record_label/artist
+EMI | 켈리스 | /music/record_label/artist
+EMI | 시나 이스턴 | /music/record_label/artist
+EMI | 케이트 부시 | /music/record_label/artist
+EMI | 버킷헤드 | /music/record_label/artist
+EMI | 로버트 파머 | /music/record_label/artist
+EMI | MC 해머 | /music/record_label/artist
+EMI | 밴 모리슨 | /music/record_label/artist
+EMI | 핑크 플로이드 | /music/record_label/artist
+EMI | 벤 하퍼 | /music/record_label/artist
+EMI | 플리 | /music/record_label/artist
+EMI | 디앤절로 | /music/record_label/artist
+EMI | 그레이스 존스 | /music/record_label/artist
+EMI | 야니 | /music/record_label/artist
+EMI | 에릭 버든 | /music/record_label/artist
+EMI | 루이스 미겔 | /music/record_label/artist
+EMI | 내털리 콜 | /music/record_label/artist
+EMI | 디페쉬 모드 | /music/record_label/artist
+EMI | 리처드 라이트 (음악가) | /music/record_label/artist
+EMI | 고릴라즈 | /music/record_label/artist
+EMI | 폴 매카트니 | /music/record_label/artist
+EMI | 얀 티에르상 | /music/record_label/artist
+EMI | 아이스-T | /music/record_label/artist
+EMI | 리처드 막스 | /music/record_label/artist
+EMI | 크라프트베르크 | /music/record_label/artist
+EMI | 카일리 미노그 | /music/record_label/artist
+EMI | 마이클 셈벨로 | /music/record_label/artist
+EMI | 리하르트 바그너 | /music/record_label/artist
+EMI | 사카모토 류이치 | /music/record_label/artist
+EMI | 비틀즈 | /music/record_label/artist
+EMI | 다비드 게타 | /music/record_label/artist
+EMI | 스티비 닉스 | /music/record_label/artist
+EMI | 로비 윌리엄스 | /music/record_label/artist
+EMI | 커린 베일리 레이 | /music/record_label/artist
+EMI | 퀸 (밴드) | /music/record_label/artist
+EMI | 제시카 심슨 | /music/record_label/artist
+EMI | 콘 (밴드) | /music/record_label/artist
+EMI | 펫 숍 보이스 | /music/record_label/artist
+EMI | 조지 마틴 | /music/record_label/artist
+EMI | 스콜피언스 | /music/record_label/artist
+EMI | 콜드플레이 | /music/record_label/artist
+EMI | 브라이언 윌슨 | /music/record_label/artist
+EMI | 제프 벡 | /music/record_label/artist
+EMI | 브라이언 페리 | /music/record_label/artist
+EMI | 제인스 어딕션 | /music/record_label/artist
+팀파니 | 북 | /music/instrument/family
+팀파니 | 타악기 | /music/instrument/family
+팀파니 | 조 잭슨 (음악가) | /music/instrument/instrumentalists
+오타와 대학교 | 오타와 대학교 | /education/educational_institution/campuses
+오타와 대학교 | 회색 | /education/educational_institution/colors
+오타와 대학교 | 공립 대학 | /education/educational_institution/school_type
+오타와 대학교 | 오타와 대학교 | /education/educational_institution_campus/educational_institution
+잭 웹 | 웨스트할리우드 | /people/deceased_person/place_of_death
+잭 웹 | 수컷 | /people/person/gender
+잭 웹 | 샌타모니카 | /people/person/place_of_birth
+잭 웹 | 배우 | /people/person/profession
+잭 웹 | 영화 감독 | /people/person/profession
+잭 웹 | 각본가 | /people/person/profession
+로리 앤더슨 | 암컷 | /people/person/gender
+로리 앤더슨 | 미국 | /people/person/nationality
+로리 앤더슨 | 작곡가 | /people/person/profession
+로리 앤더슨 | 배우 | /people/person/profession
+로리 앤더슨 | 영화 감독 | /people/person/profession
+로리 앤더슨 | 음악가 | /people/person/profession
+로리 앤더슨 | 예술가 | /people/person/profession
+덤프리스 갤러웨이 | 스코틀랜드 | /base/aareas/schema/administrative_area/administrative_parent
+덤프리스 갤러웨이 | 영국 | /location/administrative_division/country
+덤프리스 갤러웨이 | 스코틀랜드 | /location/administrative_division/first_level_division_of
+덤프리스 갤러웨이 | 덤프리스 | /location/location/contains
+광고 | 사업가 | /people/profession/specialization_of
+조 슈스터 | 수컷 | /people/person/gender
+조 슈스터 | 미국 | /people/person/nationality
+조 슈스터 | 토론토 | /people/person/place_of_birth
+조 슈스터 | 저술가 | /people/person/profession
+조 슈스터 | 예술가 | /people/person/profession
+조 슈스터 | 유대교 | /people/person/religion
+AC 밀란 | 검정 | /sports/sports_team/colors
+AC 밀란 | 빨강 | /sports/sports_team/colors
+AC 밀란 | 축구 | /sports/sports_team/sport
+피트 시거 | 그리니치빌리지 | /music/artist/origin
+피트 시거 | 수컷 | /people/person/gender
+피트 시거 | 맨해튼 | /people/person/place_of_birth
+피트 시거 | 작곡가 | /people/person/profession
+피트 시거 | 작사가 | /people/person/profession
+피트 시거 | 음악가 | /people/person/profession
+피트 시거 | 송라이터 | /people/person/profession
+노벨 경제학상 | 경제학 | /award/award_category/disciplines_or_subjects
+마이너리티 리포트 (영화) | 미국 | /film/film/country
+마이너리티 리포트 (영화) | 마이클 칸 | /film/film/edited_by
+마이너리티 리포트 (영화) | 스릴러 | /film/film/genre
+마이너리티 리포트 (영화) | 디스토피아 | /film/film/genre
+마이너리티 리포트 (영화) | 액션 영화 | /film/film/genre
+마이너리티 리포트 (영화) | 미스터리 | /film/film/genre
+마이너리티 리포트 (영화) | 누아르 영화 | /film/film/genre
+마이너리티 리포트 (영화) | SF (장르) | /film/film/genre
+마이너리티 리포트 (영화) | 영어 | /film/film/language
+마이너리티 리포트 (영화) | 스웨덴어 | /film/film/language
+마이너리티 리포트 (영화) | 존 윌리엄스 (작곡가) | /film/film/music
+마이너리티 리포트 (영화) | 얀 더본트 | /film/film/produced_by
+마이너리티 리포트 (영화) | 20세기 스튜디오 | /film/film/production_companies
+마이너리티 리포트 (영화) | 드림웍스 | /film/film/production_companies
+마이너리티 리포트 (영화) | 앰블린 엔터테인먼트 | /film/film/production_companies
+마이너리티 리포트 (영화) | 필립 K. 딕 | /film/film/story_by
+사랑의 블랙홀 | 미국 | /film/film/country
+사랑의 블랙홀 | 시카고 | /film/film/featured_film_locations
+사랑의 블랙홀 | 35mm 필름 | /film/film/film_format
+사랑의 블랙홀 | 판타지 | /film/film/genre
+사랑의 블랙홀 | 로맨스 영화 | /film/film/genre
+사랑의 블랙홀 | 희극 | /film/film/genre
+사랑의 블랙홀 | 로맨틱 코미디 | /film/film/genre
+사랑의 블랙홀 | 시간 여행 | /film/film/genre
+사랑의 블랙홀 | 이탈리아어 | /film/film/language
+사랑의 블랙홀 | 영어 | /film/film/language
+사랑의 블랙홀 | 컬럼비아 픽처스 | /film/film/production_companies
+A.I. | 마이클 칸 | /film/film/edited_by
+A.I. | 뉴욕 | /film/film/featured_film_locations
+A.I. | 모험 영화 | /film/film/genre
+A.I. | 드라마 영화 | /film/film/genre
+A.I. | 영어 | /film/film/language
+A.I. | 존 윌리엄스 (작곡가) | /film/film/music
+A.I. | 캐슬린 케네디 | /film/film/produced_by
+A.I. | 스티븐 스필버그 | /film/film/produced_by
+A.I. | 드림웍스 | /film/film/production_companies
+A.I. | 앰블린 엔터테인먼트 | /film/film/production_companies
+A.I. | 워너 브라더스 | /film/film/production_companies
+A.I. | 스티븐 스필버그 | /film/film/written_by
+론 채니 주니어 | 수컷 | /people/person/gender
+론 채니 주니어 | 미국 | /people/person/nationality
+론 채니 주니어 | 오클라호마시티 | /people/person/place_of_birth
+트리니티 칼리지 (더블린) | 트리니티 칼리지 (더블린) | /education/educational_institution/campuses
+트리니티 칼리지 (더블린) | 파랑 | /education/educational_institution/colors
+트리니티 칼리지 (더블린) | 빨강 | /education/educational_institution/colors
+트리니티 칼리지 (더블린) | 트리니티 칼리지 (더블린) | /education/educational_institution_campus/educational_institution
+퀴즈 쇼 (영화) | 미국 | /film/film/country
+퀴즈 쇼 (영화) | 뉴욕 | /film/film/featured_film_locations
+퀴즈 쇼 (영화) | 35mm 필름 | /film/film/film_format
+퀴즈 쇼 (영화) | 다큐드라마 | /film/film/genre
+퀴즈 쇼 (영화) | 드라마 영화 | /film/film/genre
+퀴즈 쇼 (영화) | 영어 | /film/film/language
+퀴즈 쇼 (영화) | 마크 아이셤 | /film/film/music
+퀴즈 쇼 (영화) | 로버트 레드퍼드 | /film/film/produced_by
+아폴로 13 | 미국 | /film/film/country
+아폴로 13 | 역사 | /film/film/genre
+아폴로 13 | 모험 영화 | /film/film/genre
+아폴로 13 | 드라마 영화 | /film/film/genre
+아폴로 13 | 영어 | /film/film/language
+아폴로 13 | 제임스 호너 | /film/film/music
+아폴로 13 | 브라이언 그레이저 | /film/film/produced_by
+아폴로 13 | 유니버설 스튜디오 | /film/film/production_companies
+꼬마돼지 베이브 | 미국 | /film/film/country
+꼬마돼지 베이브 | 오스트레일리아 | /film/film/country
+꼬마돼지 베이브 | 코미디 드라마 | /film/film/genre
+꼬마돼지 베이브 | 모험 영화 | /film/film/genre
+꼬마돼지 베이브 | 희극 | /film/film/genre
+꼬마돼지 베이브 | 드라마 영화 | /film/film/genre
+꼬마돼지 베이브 | 영어 | /film/film/language
+꼬마돼지 베이브 | 조지 밀러 (영화 감독) | /film/film/produced_by
+꼬마돼지 베이브 | 유니버설 스튜디오 | /film/film/production_companies
+꼬마돼지 베이브 | 조지 밀러 (영화 감독) | /film/film/written_by
+일 포스티노 | 벨기에 | /film/film/country
+일 포스티노 | 이탈리아 | /film/film/country
+일 포스티노 | 프랑스 | /film/film/country
+일 포스티노 | 이탈리아 | /film/film/featured_film_locations
+일 포스티노 | 전기 (문학) | /film/film/genre
+일 포스티노 | 로맨스 영화 | /film/film/genre
+일 포스티노 | 시대극 | /film/film/genre
+일 포스티노 | 희극 | /film/film/genre
+일 포스티노 | 드라마 영화 | /film/film/genre
+일 포스티노 | 이탈리아어 | /film/film/language
+센스 앤 센서빌리티 | 영국 | /film/film/country
+센스 앤 센서빌리티 | 미국 | /film/film/country
+센스 앤 센서빌리티 | 로맨스 영화 | /film/film/genre
+센스 앤 센서빌리티 | 코스튬 드라마 | /film/film/genre
+센스 앤 센서빌리티 | 드라마 영화 | /film/film/genre
+센스 앤 센서빌리티 | 영어 | /film/film/language
+센스 앤 센서빌리티 | 프랑스어 | /film/film/language
+센스 앤 센서빌리티 | 패트릭 도일 | /film/film/music
+센스 앤 센서빌리티 | 컬럼비아 픽처스 | /film/film/production_companies
+센스 앤 센서빌리티 | 엠마 톰슨 | /film/film/written_by
+파고 (영화) | 로저 디킨스 | /film/film/cinematography
+파고 (영화) | 영국 | /film/film/country
+파고 (영화) | 에릭 펠너 | /film/film/executive_produced_by
+파고 (영화) | 팀 베번 | /film/film/executive_produced_by
+파고 (영화) | 스릴러 | /film/film/genre
+파고 (영화) | 독립 영화 | /film/film/genre
+파고 (영화) | 희극 | /film/film/genre
+파고 (영화) | 범죄물 | /film/film/genre
+파고 (영화) | 영어 | /film/film/language
+파고 (영화) | 카터 버웰 | /film/film/music
+파고 (영화) | 워킹 타이틀 필름스 | /film/film/production_companies
+제리 맥과이어 | 미국 | /film/film/country
+제리 맥과이어 | 코미디 드라마 | /film/film/genre
+제리 맥과이어 | 로맨스 영화 | /film/film/genre
+제리 맥과이어 | 로맨틱 코미디 | /film/film/genre
+제리 맥과이어 | 드라마 영화 | /film/film/genre
+제리 맥과이어 | 일상물 | /film/film/genre
+샤인 (영화) | 미국 | /film/film/country
+샤인 (영화) | 오스트레일리아 | /film/film/country
+샤인 (영화) | 뉴질랜드 | /film/film/country
+샤인 (영화) | 런던 | /film/film/featured_film_locations
+샤인 (영화) | 오스트레일리아 | /film/film/featured_film_locations
+샤인 (영화) | 제61회 베를린 국제 영화제 | /film/film/film_festivals
+샤인 (영화) | 전기 (문학) | /film/film/genre
+샤인 (영화) | 음악 | /film/film/genre
