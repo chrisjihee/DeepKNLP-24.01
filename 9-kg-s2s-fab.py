@@ -1,7 +1,7 @@
 import logging
 import os
-from collections import Counter
-from collections import defaultdict as ddict
+import time
+from collections import Counter, defaultdict
 from typing import List
 
 import numpy as np
@@ -10,6 +10,7 @@ import pytorch_lightning as pl
 import scipy.sparse as sp
 import torch
 import typer
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
@@ -17,7 +18,6 @@ from transformers import AutoTokenizer, AutoConfig
 
 from chrisbase.data import AppTyper
 from nlpbook.arguments import TrainerArguments
-from pytorch_lightning.callbacks import ModelCheckpoint
 
 logger = logging.getLogger(__name__)
 main = AppTyper()
@@ -94,7 +94,7 @@ def get_next_token_dict(args: TrainerArguments, ent_token_ids_in_trie, prefix_tr
 
 
 def get_ground_truth(triples):
-    tail_ground_truth, head_ground_truth = ddict(list), ddict(list)
+    tail_ground_truth, head_ground_truth = defaultdict(list), defaultdict(list)
     for triple in triples:
         head, tail, rel = triple
         tail_ground_truth[(head, rel)].append(tail)
@@ -377,6 +377,42 @@ class DataModule(pl.LightningDataModule):
                                       pin_memory=True,
                                       num_workers=self.args.hardware.cpu_workers)
         return [test_tail_loader, test_head_loader]
+
+
+class PrintingCallback(Callback):
+    def on_train_epoch_start(self, trainer, pl_module):
+        self.start = time.time()
+        print(flush=True)
+        print(flush=True)
+        print('=' * 70, flush=True)
+        print('Epoch: %4d, ' % trainer.current_epoch, flush=True)
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        if len(pl_module.history['loss']) == 0:
+            return
+        loss = pl_module.history['loss']
+        avg_loss = sum(loss) / len(loss)
+        pl_module.history['loss'] = []
+        print(flush=True)
+        print('Total time: %4ds, loss: %2.4f' % (int(time.time() - self.start), avg_loss), flush=True)
+
+    def on_validation_start(self, trainer, pl_module):
+        if hasattr(self, 'start'):
+            print(flush=True)
+            print('Training time: %4ds' % (int(time.time() - self.start)), flush=True)
+        self.val_start = time.time()
+
+    def on_validation_end(self, trainer, pl_module):
+        print(flush=True)
+        print(pl_module.history['perf'], flush=True)
+        print('Validation time: %4ds' % (int(time.time() - self.val_start)), flush=True)
+
+    def on_test_end(self, trainer, pl_module):
+        print(flush=True)
+        print('=' * 70, flush=True)
+        print('Epoch: test', flush=True)
+        print(pl_module.history['perf'], flush=True)
+        print('=' * 70, flush=True)
 
 
 @main.command()
