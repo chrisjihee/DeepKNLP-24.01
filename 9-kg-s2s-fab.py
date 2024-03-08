@@ -1,5 +1,8 @@
+import pandas as pd
 import logging
 import os
+import random
+import re
 import time
 from collections import Counter, defaultdict
 from typing import List
@@ -9,14 +12,18 @@ import pygtrie
 import pytorch_lightning as pl
 import scipy.sparse as sp
 import torch
+import torch.nn as nn
 import typer
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoConfig
+from transformers.optimization import Adafactor
 
 from chrisbase.data import AppTyper
+from models.modified_T5 import ModifiedT5ForConditionalGeneration
+from models.modified_mT5 import ModifiedMT5ForConditionalGeneration
 from nlpbook.arguments import TrainerArguments
 
 logger = logging.getLogger(__name__)
@@ -115,6 +122,37 @@ def batchify(output_dict, key, padding_value=None, return_list=False):
     return tensor_out
 
 
+def _get_performance(ranks, dataset):
+    ranks = np.array(ranks, dtype=np.float)
+    out = dict()
+    out['mrr'] = (1. / ranks).mean(axis=0)
+    out['hit1'] = np.sum(ranks == 1, axis=0) / len(ranks)
+    out['hit3'] = np.sum(ranks <= 3, axis=0) / len(ranks)
+    out['hit10'] = np.sum(ranks <= 10, axis=0) / len(ranks)
+    if dataset == 'NELL':
+        out['hit5'] = np.sum(ranks <= 5, axis=0) / len(ranks)
+    return out
+
+
+def get_performance(model, tail_ranks, head_ranks):
+    tail_out = _get_performance(tail_ranks, model.configs.dataset)
+    head_out = _get_performance(head_ranks, model.configs.dataset)
+    mrr = np.array([tail_out['mrr'], head_out['mrr']])
+    hit1 = np.array([tail_out['hit1'], head_out['hit1']])
+    hit3 = np.array([tail_out['hit3'], head_out['hit3']])
+    hit10 = np.array([tail_out['hit10'], head_out['hit10']])
+
+    val_mrr = mrr.mean().item()
+    model.log('val_mrr', val_mrr)
+    perf = {'mrr': mrr, 'hit@1': hit1, 'hit@3': hit3, 'hit@10': hit10}
+    perf = pd.DataFrame(perf, index=['tail', 'head'])
+    perf.loc['mean'] = perf.mean(axis=0)
+    for hit in ['hit@1', 'hit@3', 'hit@5', 'hit@10']:
+        if hit in list(perf.columns):
+            perf[hit] = perf[hit].apply(lambda x: '%.2f%%' % (x * 100))
+    return perf
+
+
 def get_soft_prompt_pos(source_ids, target_ids, mode, src, tgt, vertical_bar_token_id, extra_id_0_token_id, extra_id_1_token_id):
     try:
         sep1, sep2 = [ids for ids in range(len(source_ids)) if source_ids[ids] == vertical_bar_token_id]
@@ -141,8 +179,8 @@ def get_soft_prompt_pos(source_ids, target_ids, mode, src, tgt, vertical_bar_tok
 
 
 class TrainDataset(Dataset):
-    def __init__(self, configs, tokenizer, train_triples, name_list_dict, prefix_trie_dict, ground_truth_dict):
-        self.configs = configs
+    def __init__(self, args: TrainerArguments, tokenizer, train_triples, name_list_dict, prefix_trie_dict, ground_truth_dict):
+        self.args = args
         self.train_triples = train_triples
         self.tokenizer = tokenizer
         self.vertical_bar_tok_id = tokenizer('|').input_ids[0]
@@ -162,37 +200,28 @@ class TrainDataset(Dataset):
     def __getitem__(self, index):
         train_triple = self.train_triples[index // 2]
         mode = 'tail' if index % 2 == 0 else 'head'
-        if self.configs.temporal:
-            head, tail, rel, time = train_triple
-        else:
-            head, tail, rel = train_triple
+        head, tail, rel = train_triple
         head_name, tail_name, rel_name = self.original_ent_name_list[head], self.original_ent_name_list[tail], self.rel_name_list[rel]
-        if self.configs.src_descrip_max_length > 0:
+        if self.args.data.tgt_descrip_max_length > 0:
             head_descrip, tail_descrip = '[' + self.src_description_list[head] + ']', '[' + self.src_description_list[tail] + ']'
         else:
             head_descrip, tail_descrip = '', ''
-        if self.configs.tgt_descrip_max_length > 0:
+        if self.args.data.tgt_descrip_max_length > 0:
             head_target_descrip, tail_target_descrip = '[' + self.tgt_description_list[head] + ']', '[' + self.tgt_description_list[tail] + ']'
         else:
             head_target_descrip, tail_target_descrip = '', ''
 
         if mode == 'tail':
-            if self.configs.temporal:
-                src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>' + ' | ' + time
-            else:
-                src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>'
+            src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>'
             tgt = '<extra_id_0>' + tail_name + tail_target_descrip + '<extra_id_1>'
         else:
-            if self.configs.temporal:
-                src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip + ' | ' + time
-            else:
-                src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
+            src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
             tgt = '<extra_id_0>' + head_name + head_target_descrip + '<extra_id_1>'
 
-        tokenized_src = self.tokenizer(src, max_length=self.configs.src_max_length, truncation=True)
+        tokenized_src = self.tokenizer(src, max_length=self.args.data.src_max_length, truncation=True)
         source_ids = tokenized_src.input_ids
         source_mask = tokenized_src.attention_mask
-        tokenized_tgt = self.tokenizer(tgt, max_length=self.configs.train_tgt_max_length, truncation=True)
+        tokenized_tgt = self.tokenizer(tgt, max_length=self.args.data.train_tgt_max_length, truncation=True)
         target_ids = tokenized_tgt.input_ids
         target_mask = tokenized_tgt.attention_mask
 
@@ -206,7 +235,7 @@ class TrainDataset(Dataset):
             'ent_rel': ent_rel,
         }
 
-        input_index, soft_prompt_index, target_soft_prompt_index = get_soft_prompt_pos(self.configs, source_ids, target_ids, mode,
+        input_index, soft_prompt_index, target_soft_prompt_index = get_soft_prompt_pos(source_ids, target_ids, mode,
                                                                                        src=src, tgt=tgt,
                                                                                        vertical_bar_token_id=self.vertical_bar_tok_id,
                                                                                        extra_id_0_token_id=self.extra_id_0_tok_id,
@@ -231,8 +260,8 @@ class TrainDataset(Dataset):
 
 
 class TestDataset(Dataset):
-    def __init__(self, configs, tokenizer, test_triples, name_list_dict, prefix_trie_dict, ground_truth_dict, mode):  # mode: {tail, head}
-        self.configs = configs
+    def __init__(self, args: TrainerArguments, tokenizer, test_triples, name_list_dict, prefix_trie_dict, ground_truth_dict, mode):  # mode: {tail, head}
+        self.args = args
         self.test_triples = test_triples
         self.tokenizer = tokenizer
         self.vertical_bar_tok_id = tokenizer('|').input_ids[0]
@@ -251,30 +280,21 @@ class TestDataset(Dataset):
 
     def __getitem__(self, index):
         test_triple = self.test_triples[index]
-        if self.configs.temporal:
-            head, tail, rel, time = test_triple
-        else:
-            head, tail, rel = test_triple
+        head, tail, rel = test_triple
         head_name, tail_name, rel_name = self.original_ent_name_list[head], self.original_ent_name_list[tail], self.rel_name_list[rel]
-        if self.configs.src_descrip_max_length > 0:
+        if self.args.data.tgt_descrip_max_length > 0:
             head_descrip, tail_descrip = '[' + self.src_description_list[head] + ']', '[' + self.src_description_list[tail] + ']'
         else:
             head_descrip, tail_descrip = '', ''
 
         if self.mode == 'tail':
-            if self.configs.temporal:
-                src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>' + ' | ' + time
-            else:
-                src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>'
+            src = head_name + ' ' + head_descrip + ' | ' + rel_name + ' | ' + '<extra_id_0>'
             tgt_ids = tail
         else:
-            if self.configs.temporal:
-                src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip + ' | ' + time
-            else:
-                src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
+            src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
             tgt_ids = head
 
-        tokenized_src = self.tokenizer(src, max_length=self.configs.src_max_length, truncation=True)
+        tokenized_src = self.tokenizer(src, max_length=self.args.data.src_max_length, truncation=True)
         source_ids = tokenized_src.input_ids
         source_mask = tokenized_src.attention_mask
         source_names = src
@@ -290,7 +310,7 @@ class TestDataset(Dataset):
             'test_triple': test_triple,
             'ent_rel': ent_rel
         }
-        input_index, soft_prompt_index, _ = get_soft_prompt_pos(self.configs, source_ids, None, self.mode,
+        input_index, soft_prompt_index, _ = get_soft_prompt_pos(source_ids, None, self.mode,
                                                                 src=src, tgt=None,
                                                                 vertical_bar_token_id=self.vertical_bar_tok_id,
                                                                 extra_id_0_token_id=self.extra_id_0_tok_id,
@@ -413,6 +433,362 @@ class PrintingCallback(Callback):
         print('Epoch: test', flush=True)
         print(pl_module.history['perf'], flush=True)
         print('=' * 70, flush=True)
+
+
+class T5Finetuner(pl.LightningModule):
+    def __init__(self, args: TrainerArguments, ground_truth_dict, name_list_dict, prefix_trie_dict=None):
+        super().__init__()
+        self.save_hyperparameters()
+        self.args = args
+        self.train_tail_ground_truth = ground_truth_dict['train_tail_ground_truth']
+        self.train_head_ground_truth = ground_truth_dict['train_head_ground_truth']
+        self.all_tail_ground_truth = ground_truth_dict['all_tail_ground_truth']
+        self.all_head_ground_truth = ground_truth_dict['all_head_ground_truth']
+
+        self.ent_name_list = name_list_dict['ent_name_list']
+        self.rel_name_list = name_list_dict['rel_name_list']
+
+        self.prefix_trie = prefix_trie_dict['prefix_trie']
+        self.ent_token_ids_in_trie = prefix_trie_dict['ent_token_ids_in_trie']
+        self.next_token_dict = prefix_trie_dict['next_token_dict']
+        if self.args.data.tgt_descrip_max_length > 0:
+            self.ent_token_ids_in_trie_with_descrip = prefix_trie_dict['ent_token_ids_in_trie_with_descrip']
+        config = AutoConfig.from_pretrained(args.model.pretrained)
+        if config.model_type == "t5":
+            self.core_t5_model = ModifiedT5ForConditionalGeneration.from_pretrained(args.model.pretrained)
+        elif config.model_type == "mt5":
+            self.core_t5_model = ModifiedMT5ForConditionalGeneration.from_pretrained(args.model.pretrained)
+        else:
+            raise ValueError('Invalid model type: [%s] %s' % (config.model_type, args.model.pretrained))
+
+        prompt_dim = self.core_t5_model.model_dim
+        self.rel_embed1 = nn.Embedding(self.configs.n_rel, prompt_dim)
+        self.rel_embed2 = nn.Embedding(self.configs.n_rel, prompt_dim)
+        self.rel_embed3 = nn.Embedding(self.configs.n_rel, prompt_dim)
+        self.rel_embed4 = nn.Embedding(self.configs.n_rel, prompt_dim)
+
+        self.history = {'perf': ..., 'loss': []}
+
+    def training_step(self, batched_data, batch_idx):
+        # src_ids, src_mask: .shape: (batch_size, padded_seq_len)
+        src_ids = batched_data['source_ids']
+        src_mask = batched_data['source_mask']
+        # target_ids, target_mask, labels: .shape: (batch_size, padded_seq_len)
+        target_ids = batched_data['target_ids']
+        target_mask = batched_data['target_mask']
+        labels = target_ids.clone()
+        labels[labels[:, :] == self.trainer.datamodule.tokenizer.pad_token_id] = -100
+        # train_triples .shape: (batch_size, 3)
+        train_triples = batched_data['train_triple']
+        # ent_rel .shape: (batch_size, 2)
+        ent_rel = batched_data['ent_rel']
+
+        # input_index .shape: (batch_size, seq_len + 4)
+        input_index = batched_data['input_index']
+        # soft_prompt_index .shape: (batch_size, 4)
+        soft_prompt_index = batched_data['soft_prompt_index']
+        inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, ent_rel, input_index, soft_prompt_index)
+
+        if self.configs.seq_dropout > 0.:
+            if self.configs.use_soft_prompt:
+                batch_size, length = input_mask.shape
+                rand = torch.rand_like(input_mask.float())
+                dropout = torch.logical_not(rand < self.configs.seq_dropout).long().type_as(input_mask)
+                indicator_in_batch = torch.arange(batch_size).type_as(input_mask).unsqueeze(-1)
+
+                trailing_mask = input_index[:, 1:] == 0
+                input_index = (input_index + indicator_in_batch * src_ids.shape[1]).view(-1)
+                input_src_ids = torch.index_select(src_ids.view(-1), 0, input_index).view(batch_size, length)
+                input_src_ids[:, 1:][trailing_mask] = 0
+                dropout[input_src_ids == 1820] = 1
+                dropout[input_src_ids == 32099] = 1
+
+                soft_prompt_index = (soft_prompt_index + indicator_in_batch * length).view(-1)
+                dropout = dropout.view(-1)
+                dropout[soft_prompt_index] = 1
+                dropout = dropout.view(batch_size, length)
+                input_mask = input_mask * dropout
+            else:
+                rand = torch.rand_like(src_mask.float())
+                dropout = torch.logical_not(rand < self.configs.seq_dropout).long().type_as(src_mask)
+                dropout[src_ids == 1820] = 1
+                dropout[src_ids == 32099] = 1
+                src_mask = src_mask * dropout
+
+        output = self.core_t5_model(inputs_embeds=inputs_emb, attention_mask=input_mask, labels=labels, output_hidden_states=True)
+        loss = torch.mean(output.loss)
+
+        self.history['loss'].append(loss.detach().item())
+        return {'loss': loss}
+
+    def validation_step(self, batched_data, batch_idx, dataset_idx):
+        # src_ids, src_mask: .shape: (batch_size, padded_seq_len) .type: torch.tensor
+        src_ids = batched_data['source_ids']
+        src_mask = batched_data['source_mask']
+        # src_names, target_names: .shape: (batch_size, ) .type:list(str)
+        src_names = batched_data['source_names']
+        target_names = batched_data['target_names']
+        # test_triple: .shape: (batch_size, 3)
+        self.test_triple = batched_data['test_triple']
+        # ent_rel: .shape: (batch_size, 2)
+        self.ent_rel = batched_data['ent_rel']
+
+        self.dataset_idx = dataset_idx
+        if dataset_idx == 0:
+            self.all_ground_truth = self.all_tail_ground_truth
+            self.train_ground_truth = self.train_tail_ground_truth
+        else:
+            self.all_ground_truth = self.all_head_ground_truth
+            self.train_ground_truth = self.train_head_ground_truth
+
+        # generated_text .type: list(str) .len: batch_size * num_beams
+        generated_text = self.decode(src_ids, src_mask, batched_data)
+        group_text = [generated_text[i:i + self.args.model.num_beams] for i in range(0, len(generated_text), self.args.model.num_beams)]
+        if self.configs.log_text:
+            self.log_generation(group_text, src_names, target_names, batch_idx, dataset_idx)
+
+        ranks = []
+        for i, texts in enumerate(group_text):
+            hr_key = (self.test_triple[i][dataset_idx], self.test_triple[i][2])
+            all_gt_ids = self.all_ground_truth[hr_key]
+            all_gt_seqs = [self.ent_name_list[ids] for ids in all_gt_ids]
+
+            ## get rank
+            if target_names[i] in texts:
+                top_entities = set()
+                rank = 1
+                for text in texts:
+                    if text == target_names[i]:
+                        ranks.append(rank)
+                        break
+                    if text in set(self.ent_name_list) and (text not in all_gt_seqs) and (text not in top_entities):
+                        top_entities.add(text)
+                        rank += 1
+            else:
+                ranks.append(random.randint(self.args.model.num_beams + 1, self.configs.n_ent))
+
+        out = {'ranks': ranks}
+        return out
+
+    def decode(self, src_ids, src_mask, batched_data):
+        def _extract(generated_text):
+            if self.args.data.tgt_descrip_max_length > 0:
+                compiler = re.compile(r'<extra_id_0>(.*?)\[')
+            else:
+                compiler = re.compile(r'<extra_id_0>(.*)<extra_id_1>')
+            extracted_text = []
+            for text in generated_text:
+                match = compiler.search(text)
+                if match is None:
+                    # text = text.strip().lstrip('<pad> <extra_id_0>')
+                    extracted_text.append(text.strip())
+                else:
+                    extracted_text.append(match.group(1).strip())
+            return extracted_text
+
+        def _next_candidate(args: TrainerArguments, batch_idx, input_ids):
+            hr_key = (self.test_triple[batch_idx][self.dataset_idx], self.test_triple[batch_idx][2])
+            all_gt_ids = self.all_ground_truth[hr_key]
+            ent_token_ids_in_trie = self.ent_token_ids_in_trie_with_descrip if args.data.tgt_descrip_max_length > 0 else self.ent_token_ids_in_trie
+            all_gt_seq = [tuple(ent_token_ids_in_trie[ids]) for ids in all_gt_ids]
+
+            pred_pos = 1 if self.dataset_idx == 0 else 0
+            pred_ids = tuple(ent_token_ids_in_trie[self.test_triple[batch_idx][pred_pos]])
+
+            input_ids = input_ids.tolist()
+            if input_ids[0] == 0:
+                input_ids = input_ids[1:]
+
+            if tuple(input_ids) in self.next_token_dict:
+                if len(input_ids) == 0:
+                    return [32099]
+                if input_ids[-1] == 32098:
+                    return [1]
+                next_tokens = self.next_token_dict[tuple(input_ids)]
+                all_gt_seq = [seq for seq in all_gt_seq if tuple(seq[: len(input_ids)]) == tuple(input_ids)]
+                gt_next_tokens = Counter([seq[len(input_ids)] for seq in all_gt_seq if len(input_ids) < len(seq)])
+                if tuple(pred_ids[: len(input_ids)]) == tuple(input_ids) and len(input_ids) < len(pred_ids):
+                    pred_id = Counter([pred_ids[len(input_ids)]])
+                else:
+                    pred_id = Counter([])
+                next_tokens = list(set(next_tokens - gt_next_tokens + pred_id))
+                return next_tokens
+            else:
+                return []
+
+        if self.configs.decoder in ['beam_search', 'diverse_beam_search']:
+            num_beam_groups = self.args.model.num_beam_groups if self.configs.decoder == 'diverse_beam_search' else 1
+            diversity_penalty = self.configs.diversity_penalty if self.configs.decoder == 'diverse_beam_search' else 0.
+            prefix_allowed_tokens_fn = lambda batch_idx, input_ids: _next_candidate(self.args, batch_idx, input_ids) if self.configs.use_prefix_search else None
+            if self.configs.use_soft_prompt:
+                # input_index .shape: (batch_size, seq_len + 4)
+                input_index = batched_data['input_index']
+                # soft_prompt_index .shape: (batch_size, 4)
+                soft_prompt_index = batched_data['soft_prompt_index']
+                inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
+                                                                          soft_prompt_index)
+                outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
+                                                      attention_mask=input_mask,
+                                                      return_dict_in_generate=True,
+                                                      num_return_sequences=self.args.model.num_beams,
+                                                      max_length=self.args.data.eval_tgt_max_length,
+                                                      diversity_penalty=diversity_penalty,
+                                                      num_beam_groups=num_beam_groups,
+                                                      prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
+                                                      num_beams=self.args.model.num_beams,
+                                                      bos_token_id=0, )
+            else:
+                outputs = self.core_t5_model.generate(input_ids=src_ids,
+                                                      attention_mask=src_mask,
+                                                      return_dict_in_generate=True,
+                                                      num_return_sequences=self.args.model.num_beams,
+                                                      max_length=self.args.data.eval_tgt_max_length,
+                                                      diversity_penalty=diversity_penalty,
+                                                      num_beam_groups=num_beam_groups,
+                                                      prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
+                                                      num_beams=self.args.model.num_beams, )
+            raw_generated_text = self.trainer.datamodule.tokenizer.batch_decode(outputs.sequences)
+            generated_text = _extract(raw_generated_text)
+            assert len(generated_text) == self.args.model.num_beams * len(src_ids)
+            return generated_text
+        elif self.configs.decoder == 'do_sample':
+            if self.configs.use_soft_prompt:
+                # input_index .shape: (batch_size, seq_len + 4)
+                input_index = batched_data['input_index']
+                # soft_prompt_index .shape: (batch_size, 4)
+                soft_prompt_index = batched_data['soft_prompt_index']
+                inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
+                                                                          soft_prompt_index)
+                outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
+                                                      attention_mask=input_mask,
+                                                      return_dict_in_generate=True,
+                                                      num_return_sequences=self.args.model.num_beams,
+                                                      max_length=self.args.data.eval_tgt_max_length,
+                                                      output_scores=True,
+                                                      do_sample=True)
+            else:
+                outputs = self.core_t5_model.generate(input_ids=src_ids,
+                                                      attention_mask=src_mask,
+                                                      return_dict_in_generate=True,
+                                                      num_return_sequences=self.args.model.num_beams,
+                                                      max_length=self.args.data.eval_tgt_max_length,
+                                                      output_scores=True,
+                                                      do_sample=True)
+
+            raw_generated_text = self.trainer.datamodule.tokenizer.batch_decode(outputs.sequences)
+            generated_text = _extract(raw_generated_text)
+            assert len(generated_text) == self.args.model.num_beams * len(src_ids)
+            # sequences .shape: (batch_size * num_beams, max_seq_len - 1)
+            sequences = outputs.sequences[:, 1:]
+            # scores: .shape: (batch_size * num_beams, max_seq_len - 1, vocab_size)
+            scores = torch.stack(outputs.scores).transpose(0, 1)
+            # scores: .shape: (batch_size * num_beams, max_seq_len - 1, 1)
+            scores = torch.stack([torch.gather(scores[i], 1, sequences[i].unsqueeze(1)) for i in range(len(sequences))])
+            # scores .type: list(float) .len: batch_size * num_beams
+            scores = torch.mean(scores.squeeze(-1), dim=-1).tolist()
+
+            new_generated_text = []
+            for i in range(0, len(generated_text), self.args.model.num_beams):
+                gen_seqs = generated_text[i:i + self.args.model.num_beams]
+                gen_scores = scores[i:i + self.args.model.num_beams]
+                gen_seqs = [seq for _, seq in sorted(list(zip(gen_scores, gen_seqs)), key=lambda x: x[0], reverse=True)]
+                new_generated_text.extend(gen_seqs)
+            return new_generated_text
+        else:
+            raise ValueError('Invalid decoder')
+
+    def get_soft_prompt_input_embed(self, src_ids, src_mask, ent_rel, input_index, soft_prompt_index):
+        # ent_ids, rel_ids .shape: (batch_size, 1)
+        ent_ids, rel_ids = ent_rel[:, [0]], ent_rel[:, [1]]
+        # ent_emb1, ent_emb2, rel_emb1, rel_emb2 .shape: (batch_size, 1, model_dim)
+        if self.configs.use_rel_prompt_emb:
+            ent_emb1, ent_emb2 = self.rel_embed3(rel_ids), self.rel_embed4(rel_ids)
+        else:
+            ent_emb1, ent_emb2 = self.ent_embed1(ent_ids), self.ent_embed2(ent_ids)
+        rel_emb1, rel_emb2 = self.rel_embed1(rel_ids), self.rel_embed2(rel_ids)
+        # ent_emb, rel_emb .shape: (batch_size, 2, model_dim)
+        ent_emb, rel_emb = torch.cat([ent_emb1, ent_emb2], dim=1), torch.cat([rel_emb1, rel_emb2], dim=1)
+        # soft_prompt_emb .shape: (batch_size, 4, model_dim)
+        soft_prompt_emb = torch.cat([ent_emb, rel_emb], dim=1)
+        # inputs_emb .shape: (batch_size, seq_len, model_dim)
+        inputs_emb = self.core_t5_model.encoder.embed_tokens(src_ids)
+        batch_size, seq_len, model_dim = inputs_emb.shape
+        # indicator_in_batch .shape: (batch_size, 1) .examples: torch.LongTensor([[0], [1], [2], [3]])
+        indicator_in_batch = torch.arange(batch_size).type_as(ent_ids).unsqueeze(-1)
+
+        # inputs_emb .shape: (batch_size * seq_len, model_dim)
+        inputs_emb = inputs_emb.view(-1, model_dim)
+        input_index = (input_index + indicator_in_batch * seq_len).view(-1)
+        # inputs_emb .shape: (batch_size * (seq_len + 4), model_dim)
+        inputs_emb = torch.index_select(inputs_emb, 0, input_index)
+        soft_prompt_index = (soft_prompt_index + indicator_in_batch * (seq_len + 4)).view(-1)
+        inputs_emb[soft_prompt_index] = soft_prompt_emb.view(batch_size * 4, model_dim)
+        inputs_emb = inputs_emb.view(batch_size, -1, model_dim)
+
+        input_mask = torch.cat([torch.ones(batch_size, 4).type_as(src_mask), src_mask], dim=1)
+        return inputs_emb, input_mask
+
+    def log_generation(self, group_text, src_names, target_names, batch_idx, dataset_idx):
+        log_file = os.path.join(self.configs.save_dir, 'Epoch-' + str(self.current_epoch) + '-generation.tmp')
+        with open(log_file, 'a', encoding='utf-8') as file:
+            for i, texts in enumerate(group_text):
+                file.write(str(batch_idx * self.configs.val_batch_size + i) + ' -- ' + src_names[i] + ' => ' + target_names[i] + '\n')
+                hr_key = (self.test_triple[i][dataset_idx], self.test_triple[i][2])
+                all_gt_ids = self.all_ground_truth[hr_key]
+                all_gt_seqs = [self.ent_name_list[ids] for ids in all_gt_ids]
+                ii = 1
+                for text_i, text in enumerate(texts):
+                    if text == target_names[i]:
+                        file.write('\t\t%2d %10s %s\n' % (ii, '(target):', text))
+                        ii += 1
+                    elif text in all_gt_seqs:
+                        file.write('\t\t%2s %10s %s\n' % ('', '', text))
+                    elif text in self.ent_name_list:
+                        file.write('\t\t%2d %10s %s\n' % (ii, '(ent):', text))
+                        ii += 1
+                    else:
+                        file.write('\t\t%2d %10s %s\n' % (ii, '(non-ent):', text))
+                        ii += 1
+
+    def validation_epoch_end(self, outs):
+        pred_tail_out, pred_head_out = outs
+        agg_tail_out, agg_head_out, agg_total_out = dict(), dict(), dict()
+        for out in pred_tail_out:
+            for key, value in out.items():
+                if key in agg_tail_out:
+                    agg_tail_out[key] += value
+                else:
+                    agg_tail_out[key] = value
+
+        for out in pred_head_out:
+            for key, value in out.items():
+                if key in agg_head_out:
+                    agg_head_out[key] += value
+                else:
+                    agg_head_out[key] = value
+
+        tail_ranks, head_ranks = agg_tail_out['ranks'], agg_head_out['ranks']
+        del agg_tail_out['ranks']
+        del agg_head_out['ranks']
+
+        perf = get_performance(self, tail_ranks, head_ranks)
+        print(flush=True)
+        print(flush=True)
+        print(flush=True)
+        print(perf, flush=True)
+
+    def test_step(self, batched_data, batch_idx, dataset_idx):
+        return self.validation_step(batched_data, batch_idx, dataset_idx)
+
+    def test_epoch_end(self, outs):
+        self.validation_epoch_end(outs)
+
+    def configure_optimizers(self):
+        if self.configs.optim == 'Adafactor':
+            optim = Adafactor(self.parameters(), scale_parameter=False, relative_step=False, warmup_init=False, lr=self.configs.lr)
+        else:
+            optim = torch.optim.Adam(self.parameters(), lr=self.configs.lr)
+        return optim
 
 
 @main.command()
@@ -633,6 +1009,14 @@ def train(
         'name_list_dict': name_list_dict,
         'prefix_trie_dict': prefix_trie_dict
     }
+
+    model = T5Finetuner(args, **kw_args)
+    print('model construction done.', flush=True)
+    trainer.fit(model, datamodule)
+    model_path = checkpoint_callback.best_model_path
+    print(f'model_path: [{model_path}]', flush=True)
+    model = T5Finetuner.load_from_checkpoint(model_path, strict=False, args=args, **kw_args)
+    trainer.test(model, dataloaders=datamodule)
 
 
 if __name__ == "__main__":
