@@ -58,7 +58,7 @@ class TextClsModel(LightningModule):
         train_dataset = ClassificationDataset("train", data=self.data, tokenizer=self.tokenizer)
         train_dataloader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset, replacement=False),
                                       num_workers=self.args.hardware.cpu_workers,
-                                      batch_size=self.args.hardware.batch_size,
+                                      batch_size=self.args.hardware.train_batch,
                                       collate_fn=nlpbook.data_collator,
                                       drop_last=False)
         self.fabric.print(f"Created train_dataset providing {len(train_dataset)} examples")
@@ -70,7 +70,7 @@ class TextClsModel(LightningModule):
         val_dataset = ClassificationDataset("valid", data=self.data, tokenizer=self.tokenizer)
         val_dataloader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset),
                                     num_workers=self.args.hardware.cpu_workers,
-                                    batch_size=self.args.hardware.batch_size,
+                                    batch_size=self.args.hardware.infer_batch,
                                     collate_fn=nlpbook.data_collator,
                                     drop_last=False)
         self.fabric.print(f"Created val_dataset providing {len(val_dataset)} examples")
@@ -82,7 +82,7 @@ class TextClsModel(LightningModule):
         val_dataset = ClassificationDataset("test", data=self.data, tokenizer=self.tokenizer)
         val_dataloader = DataLoader(val_dataset, sampler=SequentialSampler(val_dataset),
                                     num_workers=self.args.hardware.cpu_workers,
-                                    batch_size=self.args.hardware.batch_size,
+                                    batch_size=self.args.hardware.infer_batch,
                                     collate_fn=nlpbook.data_collator,
                                     drop_last=False)
         self.fabric.print(f"Created test_dataset providing {len(val_dataset)} examples")
@@ -246,11 +246,12 @@ def train(
         model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
         seq_len: int = typer.Option(default=64),
         # hardware
+        train_batch: int = typer.Option(default=64),
+        infer_batch: int = typer.Option(default=64),
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
         device: List[int] = typer.Option(default=[0, 1]),
-        batch_size: int = typer.Option(default=64),
         # learning
         learning_rate: float = typer.Option(default=5e-5),
         saving_policy: str = typer.Option(default="max val_acc"),
@@ -288,11 +289,12 @@ def train(
         model_name=model_name,
         seq_len=seq_len,
         # hardware
+        train_batch=train_batch,
+        infer_batch=infer_batch,
         accelerator=accelerator,
         precision=precision,
         strategy=strategy,
         device=device,
-        batch_size=batch_size,
         # learning
         learning_rate=learning_rate,
         saving_policy=saving_policy,

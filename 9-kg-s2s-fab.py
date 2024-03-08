@@ -17,6 +17,7 @@ from transformers import AutoTokenizer, AutoConfig
 
 from chrisbase.data import AppTyper
 from nlpbook.arguments import TrainerArguments
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 logger = logging.getLogger(__name__)
 main = AppTyper()
@@ -340,7 +341,7 @@ class DataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         train_loader = DataLoader(self.train_both,
-                                  batch_size=self.args.hardware.batch_size,
+                                  batch_size=self.args.hardware.train_batch,
                                   shuffle=True,
                                   collate_fn=self.train_both.collate_fn,
                                   pin_memory=True,
@@ -349,13 +350,13 @@ class DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         valid_tail_loader = DataLoader(self.valid_tail,
-                                       batch_size=self.args.hardware.val_batch_size,
+                                       batch_size=self.args.hardware.infer_batch,
                                        shuffle=False,
                                        collate_fn=self.valid_tail.collate_fn,
                                        pin_memory=True,
                                        num_workers=self.args.hardware.cpu_workers)
         valid_head_loader = DataLoader(self.valid_head,
-                                       batch_size=self.args.hardware.val_batch_size,
+                                       batch_size=self.args.hardware.infer_batch,
                                        shuffle=False,
                                        collate_fn=self.valid_head.collate_fn,
                                        pin_memory=True,
@@ -364,13 +365,13 @@ class DataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         test_tail_loader = DataLoader(self.test_tail,
-                                      batch_size=self.args.hardware.val_batch_size,
+                                      batch_size=self.args.hardware.infer_batch,
                                       shuffle=False,
                                       collate_fn=self.test_tail.collate_fn,
                                       pin_memory=True,
                                       num_workers=self.args.hardware.cpu_workers)
         test_head_loader = DataLoader(self.test_head,
-                                      batch_size=self.args.hardware.val_batch_size,
+                                      batch_size=self.args.hardware.infer_batch,
                                       shuffle=False,
                                       collate_fn=self.test_head.collate_fn,
                                       pin_memory=True,
@@ -400,11 +401,12 @@ def train(
         pretrained: str = typer.Option(default="google/mt5-base"),
         model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
         # hardware
+        train_batch: int = typer.Option(default=8),
+        infer_batch: int = typer.Option(default=8),
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
         device: List[int] = typer.Option(default=[0]),
-        batch_size: int = typer.Option(default=8),
         # learning
         learning_rate: float = typer.Option(default=0.001),
         saving_policy: str = typer.Option(default="max val_acc"),
@@ -441,11 +443,12 @@ def train(
         pretrained=pretrained,
         model_name=model_name,
         # hardware
+        train_batch=train_batch,
+        infer_batch=infer_batch,
         accelerator=accelerator,
         precision=precision,
         strategy=strategy,
         device=device,
-        batch_size=batch_size,
         # learning
         learning_rate=learning_rate,
         saving_policy=saving_policy,
@@ -560,6 +563,40 @@ def train(
 
     datamodule = DataModule(args, train_triples, valid_triples, test_triples, name_list_dict, prefix_trie_dict, ground_truth_dict)
     print('datamodule construction done.', flush=True)
+
+    print(args.env.output_home)
+    print()
+    print("----------------------------------------------------------------------------------")
+    print(f" * pl.Trainer(accelerator={args.hardware.accelerator}, precision={args.hardware.precision}, num_epochs={args.learning.num_epochs})")
+    print("----------------------------------------------------------------------------------")
+    print()
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.env.output_home,
+        filename=args.data.name + '-{epoch:03d}-{' + 'val_mrr' + ':.4f}',
+        every_n_epochs=int(args.learning.check_rate_on_training),
+        save_top_k=5,
+        monitor='val_mrr',
+        mode='max',
+    )
+    trainer = pl.Trainer(
+        devices=1,
+        precision=args.hardware.precision,
+        accelerator=args.hardware.accelerator,
+        max_epochs=args.learning.num_epochs,
+        check_val_every_n_epoch=int(args.learning.check_rate_on_training),
+        num_sanity_val_steps=0,
+        enable_progress_bar=True,
+        logger=False,
+        callbacks=[
+            checkpoint_callback,
+            PrintingCallback(),
+        ],
+    )
+    kw_args = {
+        'ground_truth_dict': ground_truth_dict,
+        'name_list_dict': name_list_dict,
+        'prefix_trie_dict': prefix_trie_dict
+    }
 
 
 if __name__ == "__main__":

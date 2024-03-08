@@ -45,7 +45,8 @@ def train(
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
         device: List[int] = typer.Option(default=[0]),
-        batch_size: int = typer.Option(default=64),
+        train_batch: int = typer.Option(default=64),
+        infer_batch: int = typer.Option(default=64),
         # learning
         validate_fmt: str = typer.Option(default="loss={val_loss:06.4f}, acc={val_acc:06.4f}"),
         validate_int: float = typer.Option(default=0.1),
@@ -70,11 +71,12 @@ def train(
         pretrained=pretrained,
         model_name=model_name,
         seq_len=seq_len,
+        train_batch=train_batch,
+        infer_batch=infer_batch,
         accelerator=accelerator,
         precision=precision,
         strategy=strategy,
         device=device,
-        batch_size=batch_size,
         tag_format_on_validate=validate_fmt,
         check_rate_on_training=validate_int,
         num_saving=num_save,
@@ -92,7 +94,7 @@ def train(
         train_dataset = ClassificationDataset("train", data=corpus, tokenizer=tokenizer)
         train_dataloader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset, replacement=False),
                                       num_workers=args.hardware.cpu_workers,
-                                      batch_size=args.hardware.batch_size,
+                                      batch_size=args.hardware.train_batch,
                                       collate_fn=nlpbook.data_collator,
                                       drop_last=False)
         logger.info(f"Created train_dataset providing {len(train_dataset)} examples")
@@ -102,7 +104,7 @@ def train(
         valid_dataset = ClassificationDataset("valid", data=corpus, tokenizer=tokenizer)
         valid_dataloader = DataLoader(valid_dataset, sampler=SequentialSampler(valid_dataset),
                                       num_workers=args.hardware.cpu_workers,
-                                      batch_size=args.hardware.batch_size,
+                                      batch_size=args.hardware.infer_batch,
                                       collate_fn=nlpbook.data_collator,
                                       drop_last=False)
         logger.info(f"Created valid_dataset providing {len(valid_dataset)} examples")
