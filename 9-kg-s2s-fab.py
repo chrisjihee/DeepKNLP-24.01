@@ -122,37 +122,6 @@ def batchify(output_dict, key, padding_value=None, return_list=False):
     return tensor_out
 
 
-def _get_performance(ranks, dataset):
-    ranks = np.array(ranks, dtype=np.float)
-    out = dict()
-    out['mrr'] = (1. / ranks).mean(axis=0)
-    out['hit1'] = np.sum(ranks == 1, axis=0) / len(ranks)
-    out['hit3'] = np.sum(ranks <= 3, axis=0) / len(ranks)
-    out['hit10'] = np.sum(ranks <= 10, axis=0) / len(ranks)
-    if dataset == 'NELL':
-        out['hit5'] = np.sum(ranks <= 5, axis=0) / len(ranks)
-    return out
-
-
-def get_performance(model, tail_ranks, head_ranks):
-    tail_out = _get_performance(tail_ranks, model.configs.dataset)
-    head_out = _get_performance(head_ranks, model.configs.dataset)
-    mrr = np.array([tail_out['mrr'], head_out['mrr']])
-    hit1 = np.array([tail_out['hit1'], head_out['hit1']])
-    hit3 = np.array([tail_out['hit3'], head_out['hit3']])
-    hit10 = np.array([tail_out['hit10'], head_out['hit10']])
-
-    val_mrr = mrr.mean().item()
-    model.log('val_mrr', val_mrr)
-    perf = {'mrr': mrr, 'hit@1': hit1, 'hit@3': hit3, 'hit@10': hit10}
-    perf = pd.DataFrame(perf, index=['tail', 'head'])
-    perf.loc['mean'] = perf.mean(axis=0)
-    for hit in ['hit@1', 'hit@3', 'hit@5', 'hit@10']:
-        if hit in list(perf.columns):
-            perf[hit] = perf[hit].apply(lambda x: '%.2f%%' % (x * 100))
-    return perf
-
-
 def get_soft_prompt_pos(source_ids, target_ids, mode, src, tgt, vertical_bar_token_id, extra_id_0_token_id, extra_id_1_token_id):
     try:
         sep1, sep2 = [ids for ids in range(len(source_ids)) if source_ids[ids] == vertical_bar_token_id]
@@ -202,11 +171,11 @@ class TrainDataset(Dataset):
         mode = 'tail' if index % 2 == 0 else 'head'
         head, tail, rel = train_triple
         head_name, tail_name, rel_name = self.original_ent_name_list[head], self.original_ent_name_list[tail], self.rel_name_list[rel]
-        if self.args.data.tgt_descrip_max_length > 0:
+        if self.args.model.tgt_descrip_max_length > 0:
             head_descrip, tail_descrip = '[' + self.src_description_list[head] + ']', '[' + self.src_description_list[tail] + ']'
         else:
             head_descrip, tail_descrip = '', ''
-        if self.args.data.tgt_descrip_max_length > 0:
+        if self.args.model.tgt_descrip_max_length > 0:
             head_target_descrip, tail_target_descrip = '[' + self.tgt_description_list[head] + ']', '[' + self.tgt_description_list[tail] + ']'
         else:
             head_target_descrip, tail_target_descrip = '', ''
@@ -218,10 +187,10 @@ class TrainDataset(Dataset):
             src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
             tgt = '<extra_id_0>' + head_name + head_target_descrip + '<extra_id_1>'
 
-        tokenized_src = self.tokenizer(src, max_length=self.args.data.src_max_length, truncation=True)
+        tokenized_src = self.tokenizer(src, max_length=self.args.model.src_max_length, truncation=True)
         source_ids = tokenized_src.input_ids
         source_mask = tokenized_src.attention_mask
-        tokenized_tgt = self.tokenizer(tgt, max_length=self.args.data.train_tgt_max_length, truncation=True)
+        tokenized_tgt = self.tokenizer(tgt, max_length=self.args.model.train_tgt_max_length, truncation=True)
         target_ids = tokenized_tgt.input_ids
         target_mask = tokenized_tgt.attention_mask
 
@@ -282,7 +251,7 @@ class TestDataset(Dataset):
         test_triple = self.test_triples[index]
         head, tail, rel = test_triple
         head_name, tail_name, rel_name = self.original_ent_name_list[head], self.original_ent_name_list[tail], self.rel_name_list[rel]
-        if self.args.data.tgt_descrip_max_length > 0:
+        if self.args.model.tgt_descrip_max_length > 0:
             head_descrip, tail_descrip = '[' + self.src_description_list[head] + ']', '[' + self.src_description_list[tail] + ']'
         else:
             head_descrip, tail_descrip = '', ''
@@ -294,7 +263,7 @@ class TestDataset(Dataset):
             src = '<extra_id_0>' + ' | ' + rel_name + ' | ' + tail_name + ' ' + tail_descrip
             tgt_ids = head
 
-        tokenized_src = self.tokenizer(src, max_length=self.args.data.src_max_length, truncation=True)
+        tokenized_src = self.tokenizer(src, max_length=self.args.model.src_max_length, truncation=True)
         source_ids = tokenized_src.input_ids
         source_mask = tokenized_src.attention_mask
         source_names = src
@@ -451,7 +420,7 @@ class T5Finetuner(pl.LightningModule):
         self.prefix_trie = prefix_trie_dict['prefix_trie']
         self.ent_token_ids_in_trie = prefix_trie_dict['ent_token_ids_in_trie']
         self.next_token_dict = prefix_trie_dict['next_token_dict']
-        if self.args.data.tgt_descrip_max_length > 0:
+        if self.args.model.tgt_descrip_max_length > 0:
             self.ent_token_ids_in_trie_with_descrip = prefix_trie_dict['ent_token_ids_in_trie_with_descrip']
         config = AutoConfig.from_pretrained(args.model.pretrained)
         if config.model_type == "t5":
@@ -462,10 +431,10 @@ class T5Finetuner(pl.LightningModule):
             raise ValueError('Invalid model type: [%s] %s' % (config.model_type, args.model.pretrained))
 
         prompt_dim = self.core_t5_model.model_dim
-        self.rel_embed1 = nn.Embedding(self.configs.n_rel, prompt_dim)
-        self.rel_embed2 = nn.Embedding(self.configs.n_rel, prompt_dim)
-        self.rel_embed3 = nn.Embedding(self.configs.n_rel, prompt_dim)
-        self.rel_embed4 = nn.Embedding(self.configs.n_rel, prompt_dim)
+        self.rel_embed1 = nn.Embedding(self.args.data.num_relation, prompt_dim)
+        self.rel_embed2 = nn.Embedding(self.args.data.num_relation, prompt_dim)
+        self.rel_embed3 = nn.Embedding(self.args.data.num_relation, prompt_dim)
+        self.rel_embed4 = nn.Embedding(self.args.data.num_relation, prompt_dim)
 
         self.history = {'perf': ..., 'loss': []}
 
@@ -489,31 +458,24 @@ class T5Finetuner(pl.LightningModule):
         soft_prompt_index = batched_data['soft_prompt_index']
         inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, ent_rel, input_index, soft_prompt_index)
 
-        if self.configs.seq_dropout > 0.:
-            if self.configs.use_soft_prompt:
-                batch_size, length = input_mask.shape
-                rand = torch.rand_like(input_mask.float())
-                dropout = torch.logical_not(rand < self.configs.seq_dropout).long().type_as(input_mask)
-                indicator_in_batch = torch.arange(batch_size).type_as(input_mask).unsqueeze(-1)
+        if self.args.model.seq_dropout > 0.:
+            batch_size, length = input_mask.shape
+            rand = torch.rand_like(input_mask.float())
+            dropout = torch.logical_not(rand < self.args.model.seq_dropout).long().type_as(input_mask)
+            indicator_in_batch = torch.arange(batch_size).type_as(input_mask).unsqueeze(-1)
 
-                trailing_mask = input_index[:, 1:] == 0
-                input_index = (input_index + indicator_in_batch * src_ids.shape[1]).view(-1)
-                input_src_ids = torch.index_select(src_ids.view(-1), 0, input_index).view(batch_size, length)
-                input_src_ids[:, 1:][trailing_mask] = 0
-                dropout[input_src_ids == 1820] = 1
-                dropout[input_src_ids == 32099] = 1
+            trailing_mask = input_index[:, 1:] == 0
+            input_index = (input_index + indicator_in_batch * src_ids.shape[1]).view(-1)
+            input_src_ids = torch.index_select(src_ids.view(-1), 0, input_index).view(batch_size, length)
+            input_src_ids[:, 1:][trailing_mask] = 0
+            dropout[input_src_ids == 1820] = 1
+            dropout[input_src_ids == 32099] = 1
 
-                soft_prompt_index = (soft_prompt_index + indicator_in_batch * length).view(-1)
-                dropout = dropout.view(-1)
-                dropout[soft_prompt_index] = 1
-                dropout = dropout.view(batch_size, length)
-                input_mask = input_mask * dropout
-            else:
-                rand = torch.rand_like(src_mask.float())
-                dropout = torch.logical_not(rand < self.configs.seq_dropout).long().type_as(src_mask)
-                dropout[src_ids == 1820] = 1
-                dropout[src_ids == 32099] = 1
-                src_mask = src_mask * dropout
+            soft_prompt_index = (soft_prompt_index + indicator_in_batch * length).view(-1)
+            dropout = dropout.view(-1)
+            dropout[soft_prompt_index] = 1
+            dropout = dropout.view(batch_size, length)
+            input_mask = input_mask * dropout
 
         output = self.core_t5_model(inputs_embeds=inputs_emb, attention_mask=input_mask, labels=labels, output_hidden_states=True)
         loss = torch.mean(output.loss)
@@ -544,7 +506,7 @@ class T5Finetuner(pl.LightningModule):
         # generated_text .type: list(str) .len: batch_size * num_beams
         generated_text = self.decode(src_ids, src_mask, batched_data)
         group_text = [generated_text[i:i + self.args.model.num_beams] for i in range(0, len(generated_text), self.args.model.num_beams)]
-        if self.configs.log_text:
+        if self.args.learning.log_text:
             self.log_generation(group_text, src_names, target_names, batch_idx, dataset_idx)
 
         ranks = []
@@ -565,14 +527,14 @@ class T5Finetuner(pl.LightningModule):
                         top_entities.add(text)
                         rank += 1
             else:
-                ranks.append(random.randint(self.args.model.num_beams + 1, self.configs.n_ent))
+                ranks.append(random.randint(self.args.model.num_beams + 1, self.args.data.num_entity))
 
         out = {'ranks': ranks}
         return out
 
     def decode(self, src_ids, src_mask, batched_data):
         def _extract(generated_text):
-            if self.args.data.tgt_descrip_max_length > 0:
+            if self.args.model.tgt_descrip_max_length > 0:
                 compiler = re.compile(r'<extra_id_0>(.*?)\[')
             else:
                 compiler = re.compile(r'<extra_id_0>(.*)<extra_id_1>')
@@ -589,7 +551,7 @@ class T5Finetuner(pl.LightningModule):
         def _next_candidate(args: TrainerArguments, batch_idx, input_ids):
             hr_key = (self.test_triple[batch_idx][self.dataset_idx], self.test_triple[batch_idx][2])
             all_gt_ids = self.all_ground_truth[hr_key]
-            ent_token_ids_in_trie = self.ent_token_ids_in_trie_with_descrip if args.data.tgt_descrip_max_length > 0 else self.ent_token_ids_in_trie
+            ent_token_ids_in_trie = self.ent_token_ids_in_trie_with_descrip if args.model.tgt_descrip_max_length > 0 else self.ent_token_ids_in_trie
             all_gt_seq = [tuple(ent_token_ids_in_trie[ids]) for ids in all_gt_ids]
 
             pred_pos = 1 if self.dataset_idx == 0 else 0
@@ -616,64 +578,44 @@ class T5Finetuner(pl.LightningModule):
             else:
                 return []
 
-        if self.configs.decoder in ['beam_search', 'diverse_beam_search']:
-            num_beam_groups = self.args.model.num_beam_groups if self.configs.decoder == 'diverse_beam_search' else 1
-            diversity_penalty = self.configs.diversity_penalty if self.configs.decoder == 'diverse_beam_search' else 0.
-            prefix_allowed_tokens_fn = lambda batch_idx, input_ids: _next_candidate(self.args, batch_idx, input_ids) if self.configs.use_prefix_search else None
-            if self.configs.use_soft_prompt:
-                # input_index .shape: (batch_size, seq_len + 4)
-                input_index = batched_data['input_index']
-                # soft_prompt_index .shape: (batch_size, 4)
-                soft_prompt_index = batched_data['soft_prompt_index']
-                inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
-                                                                          soft_prompt_index)
-                outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
-                                                      attention_mask=input_mask,
-                                                      return_dict_in_generate=True,
-                                                      num_return_sequences=self.args.model.num_beams,
-                                                      max_length=self.args.data.eval_tgt_max_length,
-                                                      diversity_penalty=diversity_penalty,
-                                                      num_beam_groups=num_beam_groups,
-                                                      prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
-                                                      num_beams=self.args.model.num_beams,
-                                                      bos_token_id=0, )
-            else:
-                outputs = self.core_t5_model.generate(input_ids=src_ids,
-                                                      attention_mask=src_mask,
-                                                      return_dict_in_generate=True,
-                                                      num_return_sequences=self.args.model.num_beams,
-                                                      max_length=self.args.data.eval_tgt_max_length,
-                                                      diversity_penalty=diversity_penalty,
-                                                      num_beam_groups=num_beam_groups,
-                                                      prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
-                                                      num_beams=self.args.model.num_beams, )
+        if self.args.model.decoder in ['beam_search', 'diverse_beam_search']:
+            num_beam_groups = self.args.model.num_beam_groups if self.args.model.decoder == 'diverse_beam_search' else 1
+            diversity_penalty = self.args.model.diversity_penalty if self.args.model.decoder == 'diverse_beam_search' else 0.
+            prefix_allowed_tokens_fn = lambda batch_idx, input_ids: _next_candidate(self.args, batch_idx, input_ids) if self.args.model.use_prefix_search else None
+            # input_index .shape: (batch_size, seq_len + 4)
+            input_index = batched_data['input_index']
+            # soft_prompt_index .shape: (batch_size, 4)
+            soft_prompt_index = batched_data['soft_prompt_index']
+            inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
+                                                                      soft_prompt_index)
+            outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
+                                                  attention_mask=input_mask,
+                                                  return_dict_in_generate=True,
+                                                  num_return_sequences=self.args.model.num_beams,
+                                                  max_length=self.args.model.eval_tgt_max_length,
+                                                  diversity_penalty=diversity_penalty,
+                                                  num_beam_groups=num_beam_groups,
+                                                  prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
+                                                  num_beams=self.args.model.num_beams,
+                                                  bos_token_id=0, )
             raw_generated_text = self.trainer.datamodule.tokenizer.batch_decode(outputs.sequences)
             generated_text = _extract(raw_generated_text)
             assert len(generated_text) == self.args.model.num_beams * len(src_ids)
             return generated_text
-        elif self.configs.decoder == 'do_sample':
-            if self.configs.use_soft_prompt:
-                # input_index .shape: (batch_size, seq_len + 4)
-                input_index = batched_data['input_index']
-                # soft_prompt_index .shape: (batch_size, 4)
-                soft_prompt_index = batched_data['soft_prompt_index']
-                inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
-                                                                          soft_prompt_index)
-                outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
-                                                      attention_mask=input_mask,
-                                                      return_dict_in_generate=True,
-                                                      num_return_sequences=self.args.model.num_beams,
-                                                      max_length=self.args.data.eval_tgt_max_length,
-                                                      output_scores=True,
-                                                      do_sample=True)
-            else:
-                outputs = self.core_t5_model.generate(input_ids=src_ids,
-                                                      attention_mask=src_mask,
-                                                      return_dict_in_generate=True,
-                                                      num_return_sequences=self.args.model.num_beams,
-                                                      max_length=self.args.data.eval_tgt_max_length,
-                                                      output_scores=True,
-                                                      do_sample=True)
+        elif self.args.model.decoder == 'do_sample':
+            # input_index .shape: (batch_size, seq_len + 4)
+            input_index = batched_data['input_index']
+            # soft_prompt_index .shape: (batch_size, 4)
+            soft_prompt_index = batched_data['soft_prompt_index']
+            inputs_emb, input_mask = self.get_soft_prompt_input_embed(src_ids, src_mask, self.ent_rel, input_index,
+                                                                      soft_prompt_index)
+            outputs = self.core_t5_model.generate(inputs_embeds=inputs_emb,
+                                                  attention_mask=input_mask,
+                                                  return_dict_in_generate=True,
+                                                  num_return_sequences=self.args.model.num_beams,
+                                                  max_length=self.args.model.eval_tgt_max_length,
+                                                  output_scores=True,
+                                                  do_sample=True)
 
             raw_generated_text = self.trainer.datamodule.tokenizer.batch_decode(outputs.sequences)
             generated_text = _extract(raw_generated_text)
@@ -701,10 +643,7 @@ class T5Finetuner(pl.LightningModule):
         # ent_ids, rel_ids .shape: (batch_size, 1)
         ent_ids, rel_ids = ent_rel[:, [0]], ent_rel[:, [1]]
         # ent_emb1, ent_emb2, rel_emb1, rel_emb2 .shape: (batch_size, 1, model_dim)
-        if self.configs.use_rel_prompt_emb:
-            ent_emb1, ent_emb2 = self.rel_embed3(rel_ids), self.rel_embed4(rel_ids)
-        else:
-            ent_emb1, ent_emb2 = self.ent_embed1(ent_ids), self.ent_embed2(ent_ids)
+        ent_emb1, ent_emb2 = self.rel_embed3(rel_ids), self.rel_embed4(rel_ids)
         rel_emb1, rel_emb2 = self.rel_embed1(rel_ids), self.rel_embed2(rel_ids)
         # ent_emb, rel_emb .shape: (batch_size, 2, model_dim)
         ent_emb, rel_emb = torch.cat([ent_emb1, ent_emb2], dim=1), torch.cat([rel_emb1, rel_emb2], dim=1)
@@ -729,10 +668,10 @@ class T5Finetuner(pl.LightningModule):
         return inputs_emb, input_mask
 
     def log_generation(self, group_text, src_names, target_names, batch_idx, dataset_idx):
-        log_file = os.path.join(self.configs.save_dir, 'Epoch-' + str(self.current_epoch) + '-generation.tmp')
+        log_file = os.path.join(self.args.env.output_home, 'Epoch-' + str(self.current_epoch) + '-generation.tmp')
         with open(log_file, 'a', encoding='utf-8') as file:
             for i, texts in enumerate(group_text):
-                file.write(str(batch_idx * self.configs.val_batch_size + i) + ' -- ' + src_names[i] + ' => ' + target_names[i] + '\n')
+                file.write(str(batch_idx * self.args.hardware.infer_batch + i) + ' -- ' + src_names[i] + ' => ' + target_names[i] + '\n')
                 hr_key = (self.test_triple[i][dataset_idx], self.test_triple[i][2])
                 all_gt_ids = self.all_ground_truth[hr_key]
                 all_gt_seqs = [self.ent_name_list[ids] for ids in all_gt_ids]
@@ -784,11 +723,44 @@ class T5Finetuner(pl.LightningModule):
         self.validation_epoch_end(outs)
 
     def configure_optimizers(self):
-        if self.configs.optim == 'Adafactor':
-            optim = Adafactor(self.parameters(), scale_parameter=False, relative_step=False, warmup_init=False, lr=self.configs.lr)
+        if self.args.learning.optimizer_cls == 'Adafactor':
+            optim = Adafactor(self.parameters(), scale_parameter=False, relative_step=False, warmup_init=False, lr=self.args.learning.learning_rate)
+        elif self.args.learning.optimizer_cls == 'AdamW':
+            optim = torch.optim.AdamW(self.parameters(), lr=self.args.learning.learning_rate)
         else:
-            optim = torch.optim.Adam(self.parameters(), lr=self.configs.lr)
+            optim = torch.optim.Adam(self.parameters(), lr=self.args.learning.learning_rate)
         return optim
+
+
+def get_performance(model: T5Finetuner, tail_ranks, head_ranks):
+    tail_out = _get_performance(tail_ranks, model.args.data.name)
+    head_out = _get_performance(head_ranks, model.args.data.name)
+    mrr = np.array([tail_out['mrr'], head_out['mrr']])
+    hit1 = np.array([tail_out['hit1'], head_out['hit1']])
+    hit3 = np.array([tail_out['hit3'], head_out['hit3']])
+    hit10 = np.array([tail_out['hit10'], head_out['hit10']])
+
+    val_mrr = mrr.mean().item()
+    model.log('val_mrr', val_mrr)
+    perf = {'mrr': mrr, 'hit@1': hit1, 'hit@3': hit3, 'hit@10': hit10}
+    perf = pd.DataFrame(perf, index=['tail', 'head'])
+    perf.loc['mean'] = perf.mean(axis=0)
+    for hit in ['hit@1', 'hit@3', 'hit@5', 'hit@10']:
+        if hit in list(perf.columns):
+            perf[hit] = perf[hit].apply(lambda x: '%.2f%%' % (x * 100))
+    return perf
+
+
+def _get_performance(ranks, dataset):
+    ranks = np.array(ranks, dtype=np.float)
+    out = dict()
+    out['mrr'] = (1. / ranks).mean(axis=0)
+    out['hit1'] = np.sum(ranks == 1, axis=0) / len(ranks)
+    out['hit3'] = np.sum(ranks <= 3, axis=0) / len(ranks)
+    out['hit10'] = np.sum(ranks <= 10, axis=0) / len(ranks)
+    if dataset == 'NELL':
+        out['hit5'] = np.sum(ranks <= 5, axis=0) / len(ranks)
+    return out
 
 
 @main.command()
@@ -804,14 +776,20 @@ def train(
         valid_file: str = typer.Option(default="valid2id.txt"),
         test_file: str = typer.Option(default="test2id.txt"),
         num_check: int = typer.Option(default=2),
+        # model
+        pretrained: str = typer.Option(default="google/mt5-base"),
+        model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
         src_max_length: int = typer.Option(default=512),
         train_tgt_max_length: int = typer.Option(default=512),
         eval_tgt_max_length: int = typer.Option(default=90),
         src_descrip_max_length: int = typer.Option(default=200),
         tgt_descrip_max_length: int = typer.Option(default=200),
-        # model
-        pretrained: str = typer.Option(default="google/mt5-base"),
-        model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
+        seq_dropout: float = typer.Option(default=0.1),
+        decoder: str = typer.Option(default="beam_search", help="[beam_search, diverse_beam_search, do_sample]"),
+        num_beams: int = typer.Option(default=40),
+        num_beam_groups: int = typer.Option(default=1),
+        diversity_penalty: float = typer.Option(default=0.0),
+        use_prefix_search: bool = typer.Option(default=False),
         # hardware
         train_batch: int = typer.Option(default=8),
         infer_batch: int = typer.Option(default=8),
@@ -820,10 +798,12 @@ def train(
         strategy: str = typer.Option(default="auto"),
         device: List[int] = typer.Option(default=[0]),
         # learning
+        optimizer_cls: str = typer.Option(default="Adam"),
         learning_rate: float = typer.Option(default=0.001),
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
         num_epochs: int = typer.Option(default=3),
+        log_text: bool = typer.Option(default=False),
         check_rate_on_training: float = typer.Option(default=1 / 10),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
@@ -846,14 +826,20 @@ def train(
         valid_file=valid_file,
         test_file=test_file,
         num_check=num_check,
+        # model
+        pretrained=pretrained,
+        model_name=model_name,
         src_max_length=src_max_length,
         train_tgt_max_length=train_tgt_max_length,
         eval_tgt_max_length=eval_tgt_max_length,
         src_descrip_max_length=src_descrip_max_length,
         tgt_descrip_max_length=tgt_descrip_max_length,
-        # model
-        pretrained=pretrained,
-        model_name=model_name,
+        seq_dropout=seq_dropout,
+        decoder=decoder,
+        num_beams=num_beams,
+        num_beam_groups=num_beam_groups,
+        diversity_penalty=diversity_penalty,
+        use_prefix_search=use_prefix_search,
         # hardware
         train_batch=train_batch,
         infer_batch=infer_batch,
@@ -862,10 +848,12 @@ def train(
         strategy=strategy,
         device=device,
         # learning
+        optimizer_cls=optimizer_cls,
         learning_rate=learning_rate,
         saving_policy=saving_policy,
         num_saving=num_saving,
         num_epochs=num_epochs,
+        log_text=log_text,
         check_rate_on_training=check_rate_on_training,
         print_rate_on_training=print_rate_on_training,
         print_rate_on_validate=print_rate_on_validate,
@@ -911,19 +899,19 @@ def train(
     print("----------------------------------------------------------------------------------")
     print()
     print('tokenizing entities...')
-    src_description_list = tokenizer.batch_decode([descrip[:-1] for descrip in tokenizer(description_list, max_length=args.data.src_descrip_max_length, truncation=True).input_ids])
-    tgt_description_list = tokenizer.batch_decode([descrip[:-1] for descrip in tokenizer(description_list, max_length=args.data.tgt_descrip_max_length, truncation=True).input_ids])
+    src_description_list = tokenizer.batch_decode([descrip[:-1] for descrip in tokenizer(description_list, max_length=args.model.src_descrip_max_length, truncation=True).input_ids])
+    tgt_description_list = tokenizer.batch_decode([descrip[:-1] for descrip in tokenizer(description_list, max_length=args.model.tgt_descrip_max_length, truncation=True).input_ids])
     print(len(src_description_list), src_description_list)
     print(len(tgt_description_list), tgt_description_list)
 
     ## construct prefix trie
     # ent_token_ids_in_trie .type: list(list(ids))
-    ent_token_ids_in_trie = tokenizer(['<extra_id_0>' + ent_name + '<extra_id_1>' for ent_name in original_ent_name_list], max_length=args.data.train_tgt_max_length, truncation=True).input_ids
+    ent_token_ids_in_trie = tokenizer(['<extra_id_0>' + ent_name + '<extra_id_1>' for ent_name in original_ent_name_list], max_length=args.model.train_tgt_max_length, truncation=True).input_ids
     print(len(ent_token_ids_in_trie), ent_token_ids_in_trie)
 
-    print(f"args.data.tgt_descrip_max_length={args.data.tgt_descrip_max_length}")
-    if args.data.tgt_descrip_max_length > 0:
-        ent_token_ids_in_trie_with_descrip = tokenizer(['<extra_id_0>' + ent_name + '[' + tgt_description_list[i] + ']' + '<extra_id_1>' for i, ent_name in enumerate(original_ent_name_list)], max_length=args.data.train_tgt_max_length, truncation=True).input_ids
+    print(f"args.model.tgt_descrip_max_length={args.model.tgt_descrip_max_length}")
+    if args.model.tgt_descrip_max_length > 0:
+        ent_token_ids_in_trie_with_descrip = tokenizer(['<extra_id_0>' + ent_name + '[' + tgt_description_list[i] + ']' + '<extra_id_1>' for i, ent_name in enumerate(original_ent_name_list)], max_length=args.model.train_tgt_max_length, truncation=True).input_ids
         print(len(ent_token_ids_in_trie_with_descrip), ent_token_ids_in_trie_with_descrip)
         prefix_trie = construct_prefix_trie(ent_token_ids_in_trie_with_descrip)
         print(f"prefix_trie1={prefix_trie}")
@@ -953,8 +941,8 @@ def train(
         'neg_candidate_mask': neg_candidate_mask,
         'next_token_dict': next_token_dict
     }
-    print(f"args.data.tgt_descrip_max_length={args.data.tgt_descrip_max_length}")
-    if args.data.tgt_descrip_max_length > 0:
+    print(f"args.model.tgt_descrip_max_length={args.model.tgt_descrip_max_length}")
+    if args.model.tgt_descrip_max_length > 0:
         prefix_trie_dict['ent_token_ids_in_trie_with_descrip'] = ent_token_ids_in_trie_with_descrip
     print(f"prefix_trie_dict.keys()={prefix_trie_dict.keys()}")
 
