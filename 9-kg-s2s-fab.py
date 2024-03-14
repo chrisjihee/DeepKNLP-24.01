@@ -794,7 +794,7 @@ def train(
         train_batch: int = typer.Option(default=8),
         infer_batch: int = typer.Option(default=8),
         accelerator: str = typer.Option(default="gpu"),
-        precision: str = typer.Option(default="16-mixed"),
+        precision: str = typer.Option(default="32"),
         strategy: str = typer.Option(default="auto"),
         device: List[int] = typer.Option(default=[0]),
         # learning
@@ -815,6 +815,11 @@ def train(
         tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
         tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
 ):
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.set_printoptions(profile='full')
+    torch.set_float32_matmul_precision('high')
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     args = TrainerArguments.from_args(
         # env
         project=project,
@@ -973,7 +978,7 @@ def train(
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.env.output_home,
         filename=args.data.name + '-{epoch:03d}-{' + 'val_mrr' + ':.4f}',
-        every_n_epochs=int(args.learning.check_rate_on_training),
+        every_n_epochs=1,  # int(args.learning.check_rate_on_training),
         save_top_k=5,
         monitor='val_mrr',
         mode='max',
@@ -983,7 +988,7 @@ def train(
         precision=args.hardware.precision,
         accelerator=args.hardware.accelerator,
         max_epochs=args.learning.num_epochs,
-        check_val_every_n_epoch=int(args.learning.check_rate_on_training),
+        check_val_every_n_epoch=1,  # int(args.learning.check_rate_on_training),
         num_sanity_val_steps=0,
         enable_progress_bar=True,
         logger=False,
