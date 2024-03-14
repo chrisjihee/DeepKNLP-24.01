@@ -1,12 +1,14 @@
 import logging
 import os
-from typing import List
+from pathlib import Path
+from typing import List, Tuple
 
 import torch
 import typer
 from lightning import LightningModule
 from lightning.fabric import Fabric
 from lightning.fabric.loggers import CSVLogger, TensorBoardLogger
+from lightning.fabric.utilities import AttributeDict
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -17,7 +19,6 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 import nlpbook
 from chrisbase.data import AppTyper, JobTimer
 from chrisbase.io import hr
-from chrisbase.time import now
 from chrisbase.util import mute_tqdm_cls
 from nlpbook.arguments import TrainerArguments, TesterArguments
 from nlpbook.cls import NsmcCorpus, ClassificationDataset
@@ -33,7 +34,31 @@ def fabric_barrier(fabric: Fabric, title: str, c='-'):
     fabric.print(hr(c=c, title=title))
 
 
-class TextClsModel(LightningModule):
+class CheckpointSaver:
+    def __init__(self, fabric: Fabric, output_home: str | Path, name_format: str, saving_mode: str, num_saving: int):
+        self.fabric = fabric
+        self.output_home = Path(output_home)
+        self.name_format = name_format
+        self.num_saving = num_saving
+        self.sorting_rev, self.sorting_key = saving_mode.split()
+        self.sorting_rev = self.sorting_rev.lower().startswith("max")
+        self.saving_checkpoints: List[Tuple[float, Path]] = []
+        self.best_model_path = None
+
+    def save_checkpoint(self, metrics: dict, state: AttributeDict | dict):
+        ckpt_key = metrics[self.sorting_key]
+        ckpt_path = self.output_home / f"{self.name_format.format(**metrics)}.ckpt"
+        self.saving_checkpoints.append((ckpt_key, ckpt_path))
+        self.saving_checkpoints.sort(key=lambda x: x[0], reverse=self.sorting_rev)
+        for _, path in self.saving_checkpoints[self.num_saving:]:
+            path.unlink(missing_ok=True)
+        self.saving_checkpoints = self.saving_checkpoints[:self.num_saving]
+        if (ckpt_key, ckpt_path) in self.saving_checkpoints:
+            self.fabric.save(ckpt_path, state)
+        self.best_model_path = self.saving_checkpoints[0][1]
+
+
+class NsmcModel(LightningModule):
     def __init__(self, args: TrainerArguments | TesterArguments):
         super().__init__()
         self.args: TesterArguments | TrainerArguments = args
@@ -117,23 +142,29 @@ class TextClsModel(LightningModule):
 
 def train_loop(
         fabric: Fabric,
-        model: TextClsModel,
+        model: NsmcModel,
         optimizer: OptimizerLRScheduler,
-        num_epochs: int,
         dataloader: DataLoader,
         val_dataloader: DataLoader,
         test_dataloader: DataLoader | None = None,
 ):
+    model.train()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     model.args.prog.global_step = 0
     model.args.prog.global_epoch = 0.0
     num_batch = len(dataloader)
     check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
     print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
-    for epoch in range(num_epochs):
+    state_saver = CheckpointSaver(
+        fabric=fabric,
+        output_home=model.args.env.output_home,
+        name_format=model.args.learning.name_format_on_saving,
+        saving_mode=model.args.learning.saving_mode,
+        num_saving=model.args.learning.num_saving,
+    )
+    for epoch in range(model.args.learning.num_epochs):
         progress = mute_tqdm_cls(bar_size=30, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="training")
         for i, batch in enumerate(dataloader, start=1):
-            model.train()
             model.args.prog.global_step += 1
             model.args.prog.global_epoch = model.args.prog.global_step / num_batch
             optimizer.zero_grad()
@@ -149,30 +180,34 @@ def train_loop(
             optimizer.step()
             progress.update()
             if i % print_interval < 1:
-                fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
+                fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
-                val_loop(fabric, model, val_dataloader)
+                metrics = val_loop(fabric, model, val_dataloader)
+                state_saver.save_checkpoint(metrics=metrics,
+                                            state=AttributeDict(model=model, optimizer=optimizer))
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
         test_loop(fabric, model, test_dataloader)
+    model.eval()
 
 
 @torch.no_grad()
 def val_loop(
         fabric: Fabric,
-        model: TextClsModel,
+        model: NsmcModel,
         dataloader: DataLoader,
 ):
+    model.eval()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_validate * num_batch - epsilon if model.args.learning.print_step_on_validate < 1 else model.args.learning.print_step_on_validate
+    metrics = {}
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
     progress = mute_tqdm_cls(bar_size=20, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="checking")
     for i, batch in enumerate(dataloader, start=1):
-        model.eval()
         outputs = model.validation_step(batch, i)
         preds.extend(outputs["preds"])
         labels.extend(outputs["labels"])
@@ -186,19 +221,22 @@ def val_loop(
                 "val_acc": accuracy(torch.tensor(preds), torch.tensor(labels)).item(),
             }
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
+            fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                          f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
         elif i % print_interval < 1:
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
+            fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-check]")
+    model.train()
+    return metrics
 
 
 @torch.no_grad()
 def test_loop(
         fabric: Fabric,
-        model: TextClsModel,
+        model: NsmcModel,
         dataloader: DataLoader,
 ):
+    model.eval()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_evaluate * num_batch - epsilon if model.args.learning.print_step_on_evaluate < 1 else model.args.learning.print_step_on_evaluate
@@ -221,11 +259,12 @@ def test_loop(
                 "test_acc": accuracy(torch.tensor(preds), torch.tensor(labels)).item(),
             }
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}"
+            fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                          f" | {model.args.learning.tag_format_on_evaluate.format(**metrics)}")
         elif i % print_interval < 1:
-            fabric.print(f"(Ep {model.args.prog.global_epoch:3.1f}) {progress}")
+            fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-test]")
+    model.train()
 
 
 @main.command()
@@ -236,14 +275,15 @@ def train(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         # data
-        data_name: str = typer.Option(default="nsmc"),
+        data_home: str = typer.Option(default="data"),
+        data_name: str = typer.Option(default="nsmc-mini"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
         num_check: int = typer.Option(default=2),
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
-        model_name: str = typer.Option(default="{ep:3.1f}, {val_loss:06.4f}, {val_acc:06.4f}"),
+        finetuning: str = typer.Option(default="finetuning"),
         seq_len: int = typer.Option(default=64),
         # hardware
         train_batch: int = typer.Option(default=64),
@@ -256,7 +296,7 @@ def train(
         learning_rate: float = typer.Option(default=5e-5),
         saving_policy: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=3),
+        num_epochs: int = typer.Option(default=1),
         check_rate_on_training: float = typer.Option(default=1 / 10),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
@@ -264,9 +304,10 @@ def train(
         print_step_on_training: int = typer.Option(default=-1),
         print_step_on_validate: int = typer.Option(default=-1),
         print_step_on_evaluate: int = typer.Option(default=-1),
-        tag_format_on_training: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, loss={loss:06.4f}, acc={acc:06.4f}"),
-        tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
-        tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.1f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
+        tag_format_on_training: str = typer.Option(default="st={step:d}, ep={epoch:.2f}, loss={loss:06.4f}, acc={acc:06.4f}"),
+        tag_format_on_validate: str = typer.Option(default="st={step:d}, ep={epoch:.2f}, val_loss={val_loss:06.4f}, val_acc={val_acc:06.4f}"),
+        tag_format_on_evaluate: str = typer.Option(default="st={step:d}, ep={epoch:.2f}, test_loss={test_loss:06.4f}, test_acc={test_acc:06.4f}"),
+        name_format_on_saving: str = typer.Option(default="ep={epoch:.1f}, loss={val_loss:06.4f}, acc={val_acc:06.4f}"),
 ):
     torch.set_float32_matmul_precision('high')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -279,6 +320,7 @@ def train(
         job_name=job_name,
         debugging=debugging,
         # data
+        data_home=data_home,
         data_name=data_name,
         train_file=train_file,
         valid_file=valid_file,
@@ -286,7 +328,7 @@ def train(
         num_check=num_check,
         # model
         pretrained=pretrained,
-        model_name=model_name,
+        finetuning=finetuning,
         seq_len=seq_len,
         # hardware
         train_batch=train_batch,
@@ -310,12 +352,14 @@ def train(
         tag_format_on_training=tag_format_on_training,
         tag_format_on_validate=tag_format_on_validate,
         tag_format_on_evaluate=tag_format_on_evaluate,
+        name_format_on_saving=name_format_on_saving,
     )
+    output_name = f"{args.tag}={args.env.job_name}"
+    args.prog.tb_logger = TensorBoardLogger(root_dir=args.env.output_home, name=output_name, version=args.env.time_stamp)  # tensorboard --logdir output --bind_all
+    args.prog.csv_logger = CSVLogger(root_dir=args.env.output_home, name=output_name, version=args.env.time_stamp, flush_logs_every_n_steps=1)
+    args.env.output_home = args.env.output_home / output_name / args.env.time_stamp
     fabric = Fabric(
-        loggers=[
-            CSVLogger(root_dir=".", version=now('%m%d.%H%M%S'), flush_logs_every_n_steps=1),
-            TensorBoardLogger(root_dir=".", version=now('%m%d.%H%M%S')),  # tensorboard --logdir lightning_logs --bind_all
-        ],
+        loggers=[args.prog.tb_logger, args.prog.csv_logger],
         devices=args.hardware.devices,
         strategy=args.hardware.strategy,
         precision=args.hardware.precision,
@@ -332,8 +376,9 @@ def train(
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}",
                   args=args if debugging or verbose > 1 else None,
                   verbose=verbose > 0 and fabric.local_rank == 0,
+                  mute_warning="lightning.fabric.loggers.csv_logs",
                   rt=1, rb=1, rc='='):
-        model = TextClsModel(args=args)
+        model = NsmcModel(args=args)
         optimizer = model.configure_optimizers()
         model, optimizer = fabric.setup(model, optimizer)
         fabric_barrier(fabric, "[after-model]", c='=')
@@ -347,7 +392,6 @@ def train(
         fabric_barrier(fabric, "[after-val_dataloader]", c='=')
 
         train_loop(fabric, model, optimizer,
-                   num_epochs=args.learning.num_epochs,
                    dataloader=train_dataloader,
                    val_dataloader=val_dataloader,
                    test_dataloader=val_dataloader)
