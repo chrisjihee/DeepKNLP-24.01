@@ -57,6 +57,13 @@ class CheckpointSaver:
             self.fabric.save(ckpt_path, state)
         self.best_model_path = self.saving_checkpoints[0][1]
 
+    def load_checkpoint(self):
+        if self.best_model_path is not None:
+            self.fabric.print(f"Loading best model from {self.best_model_path}")
+            return self.fabric.load(self.best_model_path)
+        else:
+            return None
+
 
 class NsmcModel(LightningModule):
     def __init__(self, args: TrainerArguments | TesterArguments):
@@ -184,23 +191,10 @@ def train_loop(
                 fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
-                ckpt_state = AttributeDict(model=model, optimizer=optimizer, args=model.args)
-                val_loop(fabric, model, val_dataloader, ckpt_saver, ckpt_state)
+                val_loop(fabric, model, val_dataloader, ckpt_saver)
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
-        fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing with the best model [{ckpt_saver.best_model_path}]")
-        # print(f"model.args(1)={model.args}")
-        print(f"type(model.args)={type(model.args)}")
-        ckpt_state = fabric.load(ckpt_saver.best_model_path)
-        model.load_state_dict(ckpt_state['model'])
-        optimizer.load_state_dict(ckpt_state['optimizer'])
-        # print(f"model.args(2)={model.args}")
-        print(f"type(model.args)={type(model.args)}")
-        model.args = ckpt_state['args']
-        print(f"type(ckpt_state['args'])={ckpt_state['args']}")
-        # print(f"model.args(3)={model.args}")
-        print(f"type(model.args)={type(model.args)}")
-        test_loop(fabric, model, test_dataloader)
+        test_loop(fabric, model, test_dataloader, ckpt_saver)
 
 
 @torch.no_grad()
@@ -209,7 +203,6 @@ def val_loop(
         model: NsmcModel,
         dataloader: DataLoader,
         ckpt_saver: CheckpointSaver,
-        ckpt_state: AttributeDict,
 ):
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
@@ -234,7 +227,8 @@ def val_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                          f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
-            ckpt_saver.save_checkpoint(metrics=metrics, state=ckpt_state)
+            ckpt_saver.save_checkpoint(metrics=metrics, state={'model': model,
+                                                               'args': model.args})
         elif i % print_interval < 1:
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-check]")
@@ -245,6 +239,7 @@ def test_loop(
         fabric: Fabric,
         model: NsmcModel,
         dataloader: DataLoader,
+        ckpt_saver: CheckpointSaver | None = None,
 ):
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
@@ -254,6 +249,11 @@ def test_loop(
     losses: List[torch.Tensor] = []
     progress = mute_tqdm_cls(bar_size=20, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="testing")
     for i, batch in enumerate(dataloader, start=1):
+        if i == 1 and ckpt_saver is not None:
+            ckpt_state = ckpt_saver.load_checkpoint()
+            if ckpt_state is not None:
+                model.load_state_dict(ckpt_state['model'])
+                model.args = ckpt_state['args']
         outputs = model.test_step(batch, i)
         preds.extend(outputs["preds"])
         labels.extend(outputs["labels"])
@@ -306,7 +306,7 @@ def train(
         random_seed: int = typer.Option(default=7),
         saving_mode: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=2),
+        num_epochs: int = typer.Option(default=3),
         check_rate_on_training: float = typer.Option(default=1 / 5),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
