@@ -331,7 +331,7 @@ def train(
             job_name=job_name if job_name else pretrained.name,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_40,
+            msg_format=LoggingFormat.DEBUG_32 if debugging else LoggingFormat.CHECK_32,
         ),
         data=DataOption(
             home=data_home,
