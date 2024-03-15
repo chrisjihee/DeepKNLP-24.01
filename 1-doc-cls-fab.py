@@ -189,7 +189,13 @@ def train_loop(
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
         fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing {ckpt_saver.best_model_path}:")
-        fabric.load(ckpt_saver.best_model_path)
+        print(f"ckpt_saver.best_model_path={ckpt_saver.best_model_path}")
+        print(f"model.args(1)={model.args}")
+        ckpt_state = fabric.load(ckpt_saver.best_model_path)
+        print(f"ckpt_state.keys()={ckpt_state.keys()}")
+        model.load_state_dict(ckpt_state.model)
+        optimizer.load_state_dict(ckpt_state.optimizer)
+        print(f"model.args(2)={model.args}")
         test_loop(fabric, model, test_dataloader)
 
 
@@ -281,10 +287,10 @@ def train(
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
         finetuning: str = typer.Option(default="finetuning"),
-        seq_len: int = typer.Option(default=32),
+        seq_len: int = typer.Option(default=16),
         # hardware
-        train_batch: int = typer.Option(default=64),
-        infer_batch: int = typer.Option(default=64),
+        train_batch: int = typer.Option(default=128),
+        infer_batch: int = typer.Option(default=128),
         accelerator: str = typer.Option(default="gpu"),
         precision: str = typer.Option(default="16-mixed"),
         strategy: str = typer.Option(default="auto"),
