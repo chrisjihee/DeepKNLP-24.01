@@ -192,9 +192,10 @@ def train_loop(
         print(f"ckpt_saver.best_model_path={ckpt_saver.best_model_path}")
         print(f"model.args(1)={model.args}")
         ckpt_state = fabric.load(ckpt_saver.best_model_path)
+        print(f"type(ckpt_state)={type(ckpt_state)}")
         print(f"ckpt_state.keys()={ckpt_state.keys()}")
-        model.load_state_dict(ckpt_state.model)
-        optimizer.load_state_dict(ckpt_state.optimizer)
+        model.load_state_dict(ckpt_state['model'])
+        optimizer.load_state_dict(ckpt_state['optimizer'])
         print(f"model.args(2)={model.args}")
         test_loop(fabric, model, test_dataloader)
 
@@ -287,14 +288,14 @@ def train(
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
         finetuning: str = typer.Option(default="finetuning"),
-        seq_len: int = typer.Option(default=16),
+        seq_len: int = typer.Option(default=64),
         # hardware
-        train_batch: int = typer.Option(default=128),
-        infer_batch: int = typer.Option(default=128),
+        train_batch: int = typer.Option(default=64),
+        infer_batch: int = typer.Option(default=64),
         accelerator: str = typer.Option(default="gpu"),
-        precision: str = typer.Option(default="16-mixed"),
+        precision: str = typer.Option(default="32-true"),
         strategy: str = typer.Option(default="auto"),
-        device: List[int] = typer.Option(default=[0, 1]),
+        device: List[int] = typer.Option(default=[1]),
         # learning
         learning_rate: float = typer.Option(default=5e-5),
         random_seed: int = typer.Option(default=7),
