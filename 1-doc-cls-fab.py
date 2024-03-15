@@ -277,6 +277,8 @@ def train(
         project: str = typer.Option(default="DeepKNLP"),
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
+        logging_file: str = typer.Option(default="logging.out"),
+        argument_file: str = typer.Option(default="arguments.json"),
         # data
         data_home: str = typer.Option(default="data"),
         data_name: str = typer.Option(default="nsmc"),
@@ -300,8 +302,8 @@ def train(
         random_seed: int = typer.Option(default=7),
         saving_mode: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=3),
-        check_rate_on_training: float = typer.Option(default=1 / 10),
+        num_epochs: int = typer.Option(default=1),
+        check_rate_on_training: float = typer.Option(default=1 / 5),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
         print_rate_on_evaluate: float = typer.Option(default=1 / 3),
@@ -369,10 +371,13 @@ def train(
             name_format_on_saving=name_format_on_saving,
         ),
     )
+    output_home = f"{finetuning}/{data_name}"
     output_name = f"{args.tag}={args.env.job_name}"
-    args.prog.tb_logger = TensorBoardLogger(root_dir=args.env.output_home, name=output_name, version=args.env.time_stamp)  # tensorboard --logdir output --bind_all
-    args.prog.csv_logger = CSVLogger(root_dir=args.env.output_home, name=output_name, version=args.env.time_stamp, flush_logs_every_n_steps=1)
-    args.env.output_home = args.env.output_home / output_name / args.env.time_stamp
+    args.prog.tb_logger = TensorBoardLogger(output_home, output_name, args.env.time_stamp)  # tensorboard --logdir output --bind_all
+    args.prog.csv_logger = CSVLogger(output_home, output_name, args.env.time_stamp, flush_logs_every_n_steps=1)
+    args.env.set_output_home(f"{output_home}/{output_name}/{args.env.time_stamp}")
+    args.env.set_logging_file(logging_file)
+    args.env.set_argument_file(argument_file)
     fabric = Fabric(
         loggers=[args.prog.tb_logger, args.prog.csv_logger],
         devices=args.hardware.devices,
