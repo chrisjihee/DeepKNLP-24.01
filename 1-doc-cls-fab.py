@@ -148,14 +148,13 @@ def train_loop(
         val_dataloader: DataLoader,
         test_dataloader: DataLoader | None = None,
 ):
-    model.train()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
     check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
     model.args.prog.global_step = 0
     model.args.prog.global_epoch = 0.0
-    state_saver = CheckpointSaver(
+    ckpt_saver = CheckpointSaver(
         fabric=fabric,
         output_home=model.args.env.output_home,
         name_format=model.args.learning.name_format_on_saving,
@@ -165,6 +164,7 @@ def train_loop(
     for epoch in range(model.args.learning.num_epochs):
         progress = mute_tqdm_cls(bar_size=30, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="training")
         for i, batch in enumerate(dataloader, start=1):
+            model.train()
             model.args.prog.global_step += 1
             model.args.prog.global_epoch = model.args.prog.global_step / num_batch
             optimizer.zero_grad()
@@ -179,15 +179,18 @@ def train_loop(
             fabric.backward(outputs["loss"])
             optimizer.step()
             progress.update()
+            model.eval()
             if i % print_interval < 1:
                 fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
-                val_loop(fabric, model, val_dataloader)
+                ckpt_state = AttributeDict(model=model, optimizer=optimizer)
+                val_loop(fabric, model, val_dataloader, ckpt_saver, ckpt_state)
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
+        fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing {ckpt_saver.best_model_path}:")
+        fabric.load(ckpt_saver.best_model_path)
         test_loop(fabric, model, test_dataloader)
-    model.eval()
 
 
 @torch.no_grad()
@@ -195,8 +198,9 @@ def val_loop(
         fabric: Fabric,
         model: NsmcModel,
         dataloader: DataLoader,
+        ckpt_saver: CheckpointSaver,
+        ckpt_state: AttributeDict,
 ):
-    model.eval()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_validate * num_batch - epsilon if model.args.learning.print_step_on_validate < 1 else model.args.learning.print_step_on_validate
@@ -220,12 +224,10 @@ def val_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                          f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
-            # state_saver.save_checkpoint(metrics=metrics,
-            #                             state=AttributeDict(model=model, optimizer=optimizer))
+            ckpt_saver.save_checkpoint(metrics=metrics, state=ckpt_state)
         elif i % print_interval < 1:
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-check]")
-    model.train()
 
 
 @torch.no_grad()
@@ -234,7 +236,6 @@ def test_loop(
         model: NsmcModel,
         dataloader: DataLoader,
 ):
-    model.eval()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_evaluate * num_batch - epsilon if model.args.learning.print_step_on_evaluate < 1 else model.args.learning.print_step_on_evaluate
@@ -261,7 +262,6 @@ def test_loop(
         elif i % print_interval < 1:
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-test]")
-    model.train()
 
 
 @main.command()
@@ -281,7 +281,7 @@ def train(
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
         finetuning: str = typer.Option(default="finetuning"),
-        seq_len: int = typer.Option(default=64),
+        seq_len: int = typer.Option(default=32),
         # hardware
         train_batch: int = typer.Option(default=64),
         infer_batch: int = typer.Option(default=64),
