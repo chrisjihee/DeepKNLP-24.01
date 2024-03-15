@@ -17,10 +17,10 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import nlpbook
-from chrisbase.data import AppTyper, JobTimer
-from chrisbase.io import hr
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv
+from chrisbase.io import LoggingFormat, hr
 from chrisbase.util import mute_tqdm_cls
-from nlpbook.arguments import TrainerArguments, TesterArguments
+from nlpbook.arguments import TrainerArguments, TesterArguments, DataOption, DataFiles, ModelOption, HardwareOption, LearningOption
 from nlpbook.cls import NsmcCorpus, ClassificationDataset
 from nlpbook.metrics import accuracy
 
@@ -150,11 +150,11 @@ def train_loop(
 ):
     model.train()
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
+    num_batch = len(dataloader)
+    print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
+    check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
     model.args.prog.global_step = 0
     model.args.prog.global_epoch = 0.0
-    num_batch = len(dataloader)
-    check_interval = model.args.learning.check_rate_on_training * num_batch - epsilon
-    print_interval = model.args.learning.print_rate_on_training * num_batch - epsilon if model.args.learning.print_step_on_training < 1 else model.args.learning.print_step_on_training
     state_saver = CheckpointSaver(
         fabric=fabric,
         output_home=model.args.env.output_home,
@@ -183,9 +183,7 @@ def train_loop(
                 fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
-                metrics = val_loop(fabric, model, val_dataloader)
-                state_saver.save_checkpoint(metrics=metrics,
-                                            state=AttributeDict(model=model, optimizer=optimizer))
+                val_loop(fabric, model, val_dataloader)
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
         test_loop(fabric, model, test_dataloader)
@@ -202,7 +200,6 @@ def val_loop(
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
     num_batch = len(dataloader)
     print_interval = model.args.learning.print_rate_on_validate * num_batch - epsilon if model.args.learning.print_step_on_validate < 1 else model.args.learning.print_step_on_validate
-    metrics = {}
     preds: List[int] = []
     labels: List[int] = []
     losses: List[torch.Tensor] = []
@@ -223,11 +220,12 @@ def val_loop(
             fabric.log_dict(metrics=metrics, step=model.args.prog.global_step)
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                          f" | {model.args.learning.tag_format_on_validate.format(**metrics)}")
+            # state_saver.save_checkpoint(metrics=metrics,
+            #                             state=AttributeDict(model=model, optimizer=optimizer))
         elif i % print_interval < 1:
             fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}")
     fabric_barrier(fabric, "[after-check]")
     model.train()
-    return metrics
 
 
 @torch.no_grad()
@@ -245,7 +243,6 @@ def test_loop(
     losses: List[torch.Tensor] = []
     progress = mute_tqdm_cls(bar_size=20, desc_size=8)(range(num_batch), unit=f"x{dataloader.batch_size}b", desc="testing")
     for i, batch in enumerate(dataloader, start=1):
-        model.eval()
         outputs = model.test_step(batch, i)
         preds.extend(outputs["preds"])
         labels.extend(outputs["labels"])
@@ -276,7 +273,7 @@ def train(
         debugging: bool = typer.Option(default=False),
         # data
         data_home: str = typer.Option(default="data"),
-        data_name: str = typer.Option(default="nsmc-mini"),
+        data_name: str = typer.Option(default="nsmc"),
         train_file: str = typer.Option(default="ratings_train.txt"),
         valid_file: str = typer.Option(default="ratings_test.txt"),
         test_file: str = typer.Option(default=None),
@@ -294,9 +291,10 @@ def train(
         device: List[int] = typer.Option(default=[0, 1]),
         # learning
         learning_rate: float = typer.Option(default=5e-5),
-        saving_policy: str = typer.Option(default="max val_acc"),
+        random_seed: int = typer.Option(default=7),
+        saving_mode: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=1),
+        num_epochs: int = typer.Option(default=3),
         check_rate_on_training: float = typer.Option(default=1 / 10),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
@@ -314,45 +312,56 @@ def train(
     logging.getLogger("c10d-NullHandler").setLevel(logging.WARNING)
     logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(logging.WARNING)
 
-    args = TrainerArguments.from_args(
-        # env
-        project=project,
-        job_name=job_name,
-        debugging=debugging,
-        # data
-        data_home=data_home,
-        data_name=data_name,
-        train_file=train_file,
-        valid_file=valid_file,
-        test_file=test_file,
-        num_check=num_check,
-        # model
-        pretrained=pretrained,
-        finetuning=finetuning,
-        seq_len=seq_len,
-        # hardware
-        train_batch=train_batch,
-        infer_batch=infer_batch,
-        accelerator=accelerator,
-        precision=precision,
-        strategy=strategy,
-        device=device,
-        # learning
-        learning_rate=learning_rate,
-        saving_policy=saving_policy,
-        num_saving=num_saving,
-        num_epochs=num_epochs,
-        check_rate_on_training=check_rate_on_training,
-        print_rate_on_training=print_rate_on_training,
-        print_rate_on_validate=print_rate_on_validate,
-        print_rate_on_evaluate=print_rate_on_evaluate,
-        print_step_on_training=print_step_on_training,
-        print_step_on_validate=print_step_on_validate,
-        print_step_on_evaluate=print_step_on_evaluate,
-        tag_format_on_training=tag_format_on_training,
-        tag_format_on_validate=tag_format_on_validate,
-        tag_format_on_evaluate=tag_format_on_evaluate,
-        name_format_on_saving=name_format_on_saving,
+    pretrained = Path(pretrained)
+    args = TrainerArguments(
+        env=ProjectEnv(
+            project=project,
+            job_name=job_name if job_name else pretrained.name,
+            debugging=debugging,
+            msg_level=logging.DEBUG if debugging else logging.INFO,
+            msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_40,
+        ),
+        data=DataOption(
+            home=data_home,
+            name=data_name,
+            files=DataFiles(
+                train=train_file,
+                valid=valid_file,
+                test=test_file,
+            ),
+            num_check=num_check,
+        ),
+        model=ModelOption(
+            pretrained=pretrained,
+            finetuning=finetuning,
+            seq_len=seq_len,
+        ),
+        hardware=HardwareOption(
+            train_batch=train_batch,
+            infer_batch=infer_batch,
+            accelerator=accelerator,
+            precision=precision,
+            strategy=strategy,
+            devices=device,
+        ),
+        learning=LearningOption(
+            learning_rate=learning_rate,
+            random_seed=random_seed,
+            saving_mode=saving_mode,
+            num_saving=num_saving,
+            num_epochs=num_epochs,
+            check_rate_on_training=check_rate_on_training,
+            print_rate_on_training=print_rate_on_training,
+            print_rate_on_validate=print_rate_on_validate,
+            print_rate_on_evaluate=print_rate_on_evaluate,
+            print_step_on_training=print_step_on_training,
+            print_step_on_validate=print_step_on_validate,
+            print_step_on_evaluate=print_step_on_evaluate,
+            tag_format_on_training=tag_format_on_training,
+            tag_format_on_validate=tag_format_on_validate,
+            tag_format_on_evaluate=tag_format_on_evaluate,
+            name_format_on_saving=name_format_on_saving,
+        ),
     )
     output_name = f"{args.tag}={args.env.job_name}"
     args.prog.tb_logger = TensorBoardLogger(root_dir=args.env.output_home, name=output_name, version=args.env.time_stamp)  # tensorboard --logdir output --bind_all
@@ -366,7 +375,7 @@ def train(
         accelerator=args.hardware.accelerator,
     )
     fabric.print = logger.info if fabric.local_rank == 0 else logger.debug
-    fabric.seed_everything(args.learning.seed)
+    fabric.seed_everything(args.learning.random_seed)
     fabric.launch()
     args.prog.world_size = fabric.world_size
     args.prog.node_rank = fabric.node_rank
@@ -374,7 +383,7 @@ def train(
     args.prog.global_rank = fabric.global_rank
 
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}",
-                  args=args if debugging or verbose > 1 else None,
+                  args=args if (debugging or verbose > 1) and fabric.local_rank == 0 else None,
                   verbose=verbose > 0 and fabric.local_rank == 0,
                   mute_warning="lightning.fabric.loggers.csv_logs",
                   rt=1, rb=1, rc='='):
