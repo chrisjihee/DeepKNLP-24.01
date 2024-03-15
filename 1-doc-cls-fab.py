@@ -189,13 +189,17 @@ def train_loop(
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
         fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing with the best model [{ckpt_saver.best_model_path}]")
-        print(f"model.args(1)={model.args}")
+        # print(f"model.args(1)={model.args}")
+        print(f"type(model.args)={type(model.args)}")
         ckpt_state = fabric.load(ckpt_saver.best_model_path)
         model.load_state_dict(ckpt_state['model'])
         optimizer.load_state_dict(ckpt_state['optimizer'])
-        print(f"model.args(2)={model.args}")
+        # print(f"model.args(2)={model.args}")
+        print(f"type(model.args)={type(model.args)}")
         model.args = ckpt_state['args']
-        print(f"model.args(3)={model.args}")
+        print(f"type(ckpt_state['args'])={ckpt_state['args']}")
+        # print(f"model.args(3)={model.args}")
+        print(f"type(model.args)={type(model.args)}")
         test_loop(fabric, model, test_dataloader)
 
 
@@ -302,7 +306,7 @@ def train(
         random_seed: int = typer.Option(default=7),
         saving_mode: str = typer.Option(default="max val_acc"),
         num_saving: int = typer.Option(default=3),
-        num_epochs: int = typer.Option(default=1),
+        num_epochs: int = typer.Option(default=2),
         check_rate_on_training: float = typer.Option(default=1 / 5),
         print_rate_on_training: float = typer.Option(default=1 / 30),
         print_rate_on_validate: float = typer.Option(default=1 / 3),
