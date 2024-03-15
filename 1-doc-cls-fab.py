@@ -184,19 +184,18 @@ def train_loop(
                 fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) {progress}"
                              f" | {model.args.learning.tag_format_on_training.format(**metrics)}")
             if model.args.prog.global_step % check_interval < 1:
-                ckpt_state = AttributeDict(model=model, optimizer=optimizer)
+                ckpt_state = AttributeDict(model=model, optimizer=optimizer, args=model.args)
                 val_loop(fabric, model, val_dataloader, ckpt_saver, ckpt_state)
         fabric_barrier(fabric, "[after-epoch]", c='=')
     if test_dataloader:
-        fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing {ckpt_saver.best_model_path}:")
-        print(f"ckpt_saver.best_model_path={ckpt_saver.best_model_path}")
+        fabric.print(f"(Ep {model.args.prog.global_epoch:4.2f}) testing with the best model [{ckpt_saver.best_model_path}]")
         print(f"model.args(1)={model.args}")
         ckpt_state = fabric.load(ckpt_saver.best_model_path)
-        print(f"type(ckpt_state)={type(ckpt_state)}")
-        print(f"ckpt_state.keys()={ckpt_state.keys()}")
         model.load_state_dict(ckpt_state['model'])
         optimizer.load_state_dict(ckpt_state['optimizer'])
         print(f"model.args(2)={model.args}")
+        model.args = ckpt_state['args']
+        print(f"model.args(3)={model.args}")
         test_loop(fabric, model, test_dataloader)
 
 
