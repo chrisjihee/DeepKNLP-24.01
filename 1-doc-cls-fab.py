@@ -293,7 +293,7 @@ def train(
         # model
         pretrained: str = typer.Option(default="pretrained/KPF-BERT"),
         finetuning: str = typer.Option(default="finetuning"),
-        seq_len: int = typer.Option(default=32),
+        seq_len: int = typer.Option(default=64),
         # hardware
         train_batch: int = typer.Option(default=64),
         infer_batch: int = typer.Option(default=64),
