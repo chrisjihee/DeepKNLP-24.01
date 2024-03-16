@@ -321,8 +321,8 @@ def train(
 ):
     torch.set_float32_matmul_precision('high')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    logging.getLogger("c10d-NullHandler").setLevel(logging.WARNING)
-    logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(logging.WARNING)
+    # logging.getLogger("c10d-NullHandler").setLevel(logging.WARNING)
+    # logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(logging.WARNING)
 
     pretrained = Path(pretrained)
     args = TrainerArguments(
